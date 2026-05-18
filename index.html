@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic SQL - Unified Chat Engine</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #0a0c10;
+            --bg-card: rgba(18, 22, 31, 0.75);
+            --primary: #00f0ff;
+            --primary-glow: rgba(0, 240, 255, 0.4);
+            --accent: #bd00ff;
+            --text-main: #f3f4f6;
+            --text-muted: #858a97;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --error-color: #ff3b30;
+            --success-color: #34c759;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Ambient background glow elements */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 50%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.06) 0%, transparent 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 40%;
+            height: 50%;
+            background: radial-gradient(circle, rgba(189, 0, 255, 0.05) 0%, transparent 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Navigation Bar */
+        nav {
+            height: 70px;
+            background: rgba(10, 12, 16, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-b: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .logo-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: #ffffff;
+        }
+
+        .logo-text h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff 60%, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-top: 1px;
+        }
+
+        /* Connection Bar */
+        .connect-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 12px;
+            max-width: 550px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .connect-bar:focus-within {
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+        }
+
+        .connect-bar input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            flex: 1;
+        }
+
+        .connect-bar input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        .connect-btn {
+            background: linear-gradient(90deg, var(--primary), #00d2ff);
+            border: none;
+            outline: none;
+            color: #05070a;
+            font-weight: 600;
+            font-size: 11px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .connect-btn:hover {
+            box-shadow: 0 0 12px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--error-color);
+            box-shadow: 0 0 8px var(--error-color);
+        }
+
+        .status-badge.connected .status-dot {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        /* Schema / Connected Tables Info */
+        .schema-banner {
+            max-width: 1100px;
+            width: 100%;
+            margin: 20px auto 0;
+            padding: 0 20px;
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .schema-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .schema-title {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .table-chip {
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        /* Main Workspace */
+        main {
+            flex: 1;
+            max-width: 1100px;
+            width: 100%;
+            margin: 20px auto;
+            padding: 0 20px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Chat History Box */
+        .chat-box {
+            flex: 1;
+            min-height: 480px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            border-b: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: 520px;
+        }
+
+        /* Welcome Message */
+        .welcome-prompt {
+            margin: auto;
+            text-align: center;
+            max-width: 380px;
+            padding: 40px 20px;
+            opacity: 0.8;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .welcome-prompt svg {
+            width: 48px;
+            height: 48px;
+            color: var(--primary);
+            margin-bottom: 16px;
+            filter: drop-shadow(0 0 10px var(--primary-glow));
+        }
+
+        .welcome-prompt h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .welcome-prompt p {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Message Bubbles */
+        .message {
+            display: flex;
+            gap: 16px;
+            max-width: 85%;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .message.user .message-avatar {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+
+        .message.assistant .message-avatar {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            color: var(--primary);
+            text-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message-bubble {
+            padding: 14px 18px;
+            border-radius: 16px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, var(--primary), #0084ff);
+            color: #05070a;
+            font-weight: 500;
+            box-shadow: 0 6px 15px rgba(0, 240, 255, 0.15);
+            border-top-right-radius: 4px;
+            text-align: left;
+        }
+
+        .message.assistant .message-bubble {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border-top-left-radius: 4px;
+        }
+
+        /* Modern Warning Alert Badge */
+        .warning-badge {
+            background: rgba(0, 240, 255, 0.06);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: pulseWarning 2s infinite ease-in-out;
+            margin-bottom: 2px;
+        }
+
+        .warning-badge svg {
+            width: 14px;
+            height: 14px;
+            color: var(--primary);
+        }
+
+        .warning-badge strong {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Error Badge */
+        .error-badge {
+            background: rgba(255, 59, 48, 0.08);
+            border: 1px solid rgba(255, 59, 48, 0.25);
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #ff6961;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .error-badge-title {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .error-badge p {
+            line-height: 1.4;
+        }
+
+        .error-suggestion {
+            font-style: italic;
+            opacity: 0.8;
+            margin-top: 4px;
+            border-top: 1px solid rgba(255, 59, 48, 0.15);
+            padding-top: 4px;
+        }
+
+        /* Code/SQL Display Blocks */
+        .sql-block {
+            background: #05070a;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .sql-block-header {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sql-block-header svg {
+            width: 10px;
+            height: 10px;
+            color: var(--primary);
+        }
+
+        .sql-block pre {
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: rgba(0, 240, 255, 0.8);
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Result Data Tables */
+        .results-block {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #05070a;
+            margin-top: 4px;
+            max-width: 100%;
+        }
+
+        .results-block-header {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .results-table-container {
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-align: left;
+        }
+
+        .results-table th {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.01);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .results-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .results-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .results-more-rows {
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 9px;
+            padding: 6px;
+            text-align: center;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        /* Input Form Block */
+        .chat-input-form {
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.02);
+            border-t: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-input-wrapper {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 4px 16px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.08);
+        }
+
+        .chat-input-wrapper input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            font-size: 13.5px;
+            padding: 12px 0;
+            flex: 1;
+            width: 100%;
+        }
+
+        .chat-input-wrapper input::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .send-btn {
+            background: linear-gradient(95deg, var(--primary), #00d2ff);
+            border: none;
+            outline: none;
+            color: #05070a;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .send-btn:hover {
+            box-shadow: 0 0 15px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .send-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2.5;
+        }
+
+        /* Spinner animation */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px dashed #05070a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Keyframes */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseWarning {
+            0% { box-shadow: 0 0 4px rgba(0, 240, 255, 0.05); }
+            50% { box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+            100% { box-shadow: 0 0 4px rgba(0, 240, 255, 0.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav>
+        <div class="logo">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M12,3C7.58,3 4,4.79 4,7C4,9.21 7.58,11 12,11C16.42,11 20,9.21 20,7C20,4.79 16.42,3 12,3M4,9V12C4,14.21 7.58,16 12,16C16.42,16 20,14.21 20,12V9C20,11.21 16.42,13 12,13C7.58,13 4,11.21 4,9M4,14V17C4,19.21 7.58,21 12,21C16.42,21 20,19.21 20,17V14C20,16.21 16.42,18 12,18C7.58,18 4,16.21 4,14Z"/></svg>
+            </div>
+            <div class="logo-text">
+                <h1>Kinetic SQL</h1>
+                <p>Unified Production Engine</p>
+            </div>
+        </div>
+
+        <!-- Connection Control Panel -->
+        <div class="connect-bar">
+            <div id="connection-status" class="status-badge">
+                <div class="status-dot"></div>
+            </div>
+            <input type="text" id="db-url-input" placeholder="Enter SQLite Path (e.g. itciot.db) or Postgres Connection String..." value="itciot.db">
+            <button id="connect-btn" class="connect-btn">Connect</button>
+        </div>
+    </nav>
+
+    <!-- Connected Tables Banner -->
+    <div id="schema-banner" class="schema-banner">
+        <div id="schema-container" class="schema-container">
+            <div class="schema-title">Connected Schema:</div>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main>
+        <div class="chat-box">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-title">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>Industrial Database Query Terminal</span>
+                </div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div id="chat-messages" class="chat-messages">
+                <div id="welcome-prompt" class="welcome-prompt">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M6.34 17.66l2.83-2.83M14.83 9.17l2.83-2.83"/></svg>
+                    <h3>Ready for Analysis</h3>
+                    <p>Connect your database at the top, then ask about overall efficiency (OEE), excess give away percent, shifts, or column metrics.</p>
+                </div>
+            </div>
+
+            <!-- Input Form Box -->
+            <form id="chat-form" class="chat-input-form">
+                <div class="chat-input-wrapper">
+                    <input type="text" id="query-input" placeholder="Ask a question about your database..." autocomplete="off">
+                </div>
+                <button type="submit" id="send-btn" class="send-btn" disabled>
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Client Interactions script -->
+    <script>
+        const dbInput = document.getElementById("db-url-input");
+        const connectBtn = document.getElementById("connect-btn");
+        const connBadge = document.getElementById("connection-status");
+        const schemaBanner = document.getElementById("schema-banner");
+        const schemaContainer = document.getElementById("schema-container");
+        
+        const chatForm = document.getElementById("chat-form");
+        const queryInput = document.getElementById("query-input");
+        const sendBtn = document.getElementById("send-btn");
+        const messagesContainer = document.getElementById("chat-messages");
+        const welcomePrompt = document.getElementById("welcome-prompt");
+
+        let isConnected = false;
+        let isStreaming = false;
+
+        // Establish Database Connection
+        async function connectDB() {
+            const dbUrl = dbInput.value.trim();
+            if (!dbUrl) return;
+
+            connectBtn.disabled = true;
+            connectBtn.innerText = "Connecting...";
+
+            try {
+                const response = await fetch("/connect", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ db_url: dbUrl })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Connection failed");
+
+                // Update connection visual state
+                isConnected = true;
+                connBadge.classList.add("connected");
+                connectBtn.innerText = "Reconnect";
+                sendBtn.disabled = false;
+                
+                // Render connected tables banner
+                renderSchemaBanner(data.schema_info);
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+                isConnected = false;
+                connBadge.classList.remove("connected");
+                connectBtn.innerText = "Connect";
+            } finally {
+                connectBtn.disabled = false;
+            }
+        }
+
+        function renderSchemaBanner(schemaInfo) {
+            // Remove previous chips except the title
+            const chips = schemaContainer.querySelectorAll(".table-chip");
+            chips.forEach(c => c.remove());
+
+            if (schemaInfo && schemaInfo.tables && schemaInfo.tables.length > 0) {
+                schemaInfo.tables.forEach(table => {
+                    const chip = document.createElement("div");
+                    chip.className = "table-chip";
+                    chip.innerText = table.name;
+                    schemaContainer.appendChild(chip);
+                });
+                schemaBanner.style.display = "block";
+            } else {
+                schemaBanner.style.display = "none";
+            }
+        }
+
+        // Trigger connection on Connect click
+        connectBtn.addEventListener("click", connectDB);
+
+        // Serve dynamic chat streaming
+        chatForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const queryText = queryInput.value.trim();
+            if (!queryText || isStreaming) return;
+
+            // Clear input box immediately
+            queryInput.value = "";
+            isStreaming = true;
+            
+            // Hide welcome screen
+            if (welcomePrompt) welcomePrompt.style.display = "none";
+
+            // 1. Render User Message Bubble
+            renderMessage("user", queryText);
+            
+            // 2. Prepare Assistant Message elements
+            const botMessageId = "bot-msg-" + Date.now();
+            const botMessageEl = renderMessage("assistant", "", botMessageId);
+            const bubbleEl = botMessageEl.querySelector(".message-bubble");
+            const contentEl = botMessageEl.querySelector(".message-content");
+
+            // Rerun loader spinner
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query: queryText })
+                });
+
+                if (!response.ok) throw new Error("Failed to initiate connection to query stream.");
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let currentEvent = "";
+
+                // Temporary accumulators to avoid re-rendering layout continuously
+                let currentCorrections = null;
+                let currentSql = "";
+                let currentResults = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split("\n");
+
+                    for (const line of lines) {
+                        if (line.startsWith("event: ")) {
+                            currentEvent = line.replace("event: ", "").trim();
+                        } else if (line.startsWith("data: ")) {
+                            const data = JSON.parse(line.replace("data: ", ""));
+                            
+                            // Check if event is spelling correction
+                            if (currentEvent === "spelling_correction") {
+                                renderSpellingCorrections(contentEl, data.corrections);
+                            } 
+                            // Check if standard data chunk
+                            else if (data.answer) {
+                                bubbleEl.innerText = data.answer;
+                                if (data.sql && data.sql !== currentSql) {
+                                    currentSql = data.sql;
+                                    renderSqlBlock(contentEl, data.sql);
+                                }
+                                if (data.results && data.results !== currentResults) {
+                                    currentResults = data.results;
+                                    renderResultsTable(contentEl, data.results);
+                                }
+                            }
+                            // Check if backend returned pipeline stage update containing intermediate outputs
+                            else if (data.sql || data.results) {
+                                if (data.sql && data.sql !== currentSql) {
+                                    currentSql = data.sql;
+                                    renderSqlBlock(contentEl, data.sql);
+                                }
+                                if (data.results && data.results !== currentResults) {
+                                    currentResults = data.results;
+                                    renderResultsTable(contentEl, data.results);
+                                }
+                            }
+                            // Check if pipeline generated a detailed error
+                            else if (currentEvent === "error") {
+                                renderErrorBadge(contentEl, data);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                renderErrorBadge(contentEl, {
+                    error_type: "Network / Connection Error",
+                    message: err.message,
+                    suggestion: "Check if your Ollama background service is running and configured correctly."
+                });
+            } finally {
+                isStreaming = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+                messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
+            }
+        });
+
+        // Visual Element Builders
+        function renderMessage(role, text, id = "") {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${role}`;
+            if (id) msgDiv.id = id;
+
+            const avatar = document.createElement("div");
+            avatar.className = "message-avatar";
+            avatar.innerText = role === "user" ? "U" : "AI";
+
+            const content = document.createElement("div");
+            content.className = "message-content";
+
+            const bubble = document.createElement("div");
+            bubble.className = "message-bubble";
+            bubble.innerText = text;
+
+            content.appendChild(bubble);
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(content);
+
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
+            return msgDiv;
+        }
+
+        function renderSpellingCorrections(container, corrections) {
+            // Check if already rendered
+            if (container.querySelector(".warning-badge")) return;
+
+            const keys = Object.keys(corrections);
+            if (keys.length === 0) return;
+
+            const badge = document.createElement("div");
+            badge.className = "warning-badge";
+            
+            // Neon Sparkles Icon
+            badge.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l1.41-1.41M16.24 7.76l1.41-1.41"/></svg>
+                <span>Fuzzy Schema Mapping: ${keys.map(k => `<strong>"${k}"</strong> ➔ <strong>"${corrections[k]}"</strong>`).join(", ")}</span>
+            `;
+            
+            // Insert at top of message content container
+            container.insertBefore(badge, container.firstChild);
+        }
+
+        function renderSqlBlock(container, sql) {
+            // Check if block already rendered
+            let block = container.querySelector(".sql-block");
+            if (!block) {
+                block = document.createElement("div");
+                block.className = "sql-block";
+                
+                block.innerHTML = `
+                    <div class="sql-block-header">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18L22 12L16 6M8 6L2 12L8 18"/></svg>
+                        Generated Database SQL Statement
+                    </div>
+                    <pre><code></code></pre>
+                `;
+                container.appendChild(block);
+            }
+            
+            block.querySelector("code").innerText = sql;
+        }
+
+        function renderResultsTable(container, results) {
+            let block = container.querySelector(".results-block");
+            if (block) block.remove(); // Redraw fresh dataset
+
+            if (!results || !results.columns || results.columns.length === 0) return;
+
+            block = document.createElement("div");
+            block.className = "results-block";
+
+            // Table Header info
+            const header = document.createElement("div");
+            header.className = "results-block-header";
+            header.innerHTML = `
+                <span>Database Result Record Set</span>
+                <span>${results.row_count} Rows Returned</span>
+            `;
+            block.appendChild(header);
+
+            const tableContainer = document.createElement("div");
+            tableContainer.className = "results-table-container";
+
+            const table = document.createElement("table");
+            table.className = "results-table";
+
+            // Headers
+            const thead = document.createElement("thead");
+            const hRow = document.createElement("tr");
+            results.columns.forEach(col => {
+                const th = document.createElement("th");
+                th.innerText = col;
+                hRow.appendChild(th);
+            });
+            thead.appendChild(hRow);
+            table.appendChild(thead);
+
+            // Row records (limit to 5 visual rows for compact design)
+            const tbody = document.createElement("tbody");
+            const displayRows = results.rows.slice(0, 5);
+            displayRows.forEach(row => {
+                const rRow = document.createElement("tr");
+                results.columns.forEach(col => {
+                    const td = document.createElement("td");
+                    td.innerText = row[col] !== undefined ? row[col] : "NULL";
+                    rRow.appendChild(td);
+                });
+                tbody.appendChild(rRow);
+            });
+            table.appendChild(tbody);
+            tableContainer.appendChild(table);
+            block.appendChild(tableContainer);
+
+            // Add excess row marker
+            if (results.row_count > 5) {
+                const excess = document.createElement("div");
+                excess.className = "results-more-rows";
+                excess.innerText = `+ ${results.row_count - 5} More Database Rows in ResultSet`;
+                block.appendChild(excess);
+            }
+
+            container.appendChild(block);
+            messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
+        }
+
+        function renderErrorBadge(container, error) {
+            const badge = document.createElement("div");
+            badge.className = "error-badge";
+
+            badge.innerHTML = `
+                <div class="error-badge-title">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    ${error.error_type || "Pipeline Failure"}
+                </div>
+                <p>${error.message || "An unexpected error occurred during execution."}</p>
+                ${error.suggestion ? `<div class="error-suggestion">💡 ${error.suggestion}</div>` : ""}
+            `;
+
+            container.appendChild(badge);
+            messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
+        }
+    </script>
+</body>
+</html>

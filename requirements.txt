@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+aiosqlite
+asyncpg
+pydantic
+pydantic-settings
+litellm
+python-dotenv
+chromadb
+requests
+numpy
+dateparser
