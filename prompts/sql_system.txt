@@ -18,6 +18,7 @@ RULES:
 
 9. TIMESTAMP AND SHIFT CASTING: When filtering shift hours (e.g. 'morning shift', 'afternoon shift', 'night shift') on tables containing both a `created_at` timestamp and a `unix_timestamp` integer, ALWAYS apply the time-range filter by casting the real `created_at` timestamp column to time: `created_at::time BETWEEN '14:00:00' AND '22:00:00'`. NEVER compare raw Unix epoch integers (like `unix_timestamp`) directly to time strings.
 10. NO ID ARITHMETIC: Do NOT multiply unique identifier fields (like `meter_id`, `feeder_id`, `id`) by metric variables (like `cost`, `kwh_consumed`, or `weight`). Treat IDs strictly as groupable keys or join conditions.
+11. DIAGNOSTIC QUERY DESIGN: When the user asks diagnostic, trend, or troubleshooting questions (e.g. starting with "Why...", "Is there a trend...", "Compare..."), do NOT write a query that returns a single aggregate value or a single row. Instead, write a query that retrieves a rich, detailed dataset (e.g. daily/hourly groupings or broken down by variant/shift) and includes potential correlating parameters (like alert counts, average speeds, target weights, or silo levels) so the explainer can perform a comprehensive root-cause analysis.
 
 OUTPUT FORMAT:
 Return only the SQL string. E.g.: SELECT ... FROM ... WHERE ...

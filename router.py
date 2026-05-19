@@ -79,6 +79,24 @@ class QueryRouter:
                 )
             }
 
+        # Check if the query is a general conceptual / RAG query
+        conceptual_prefixes = [
+            "what is", "explain", "tell me about", "define", "what does", 
+            "what are", "how does", "why does", "meaning of", "can you explain"
+        ]
+        is_conceptual_prompt = any(q_lower.startswith(prefix) for prefix in conceptual_prefixes)
+        
+        # Ensure it's not a database query asking for calculations or lookups
+        db_indicators = [
+            "calculate", "show me", "sum", "average", "total", "count", 
+            "maximum", "minimum", "highest", "lowest", "limit", "record", 
+            "data in", "table", "value", "level"
+        ]
+        has_db_indicator = any(indicator in q_lower for indicator in db_indicators)
+        
+        if is_conceptual_prompt and not has_db_indicator:
+            return {"type": "conceptual"}
+
         # 4. Off-topic/Strict Mode Database Guardrail
         # Extract keywords from the connected schema to check domain relevance
         tables = self._get_tables()

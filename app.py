@@ -112,6 +112,18 @@ async def serve_dashboard():
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="index.html dashboard template was not found.")
 
+@app.get("/status")
+async def get_connection_status():
+    """Returns active database connection details and schema if already connected."""
+    global db_connector, active_schema
+    if db_connector and active_schema:
+        return {
+            "status": "connected",
+            "db_url": settings.DATABASE_URL,
+            "schema_info": active_schema
+        }
+    return {"status": "disconnected"}
+
 @app.post("/connect")
 async def connect_database(req: ConnectRequest):
     """Establishes database connection dynamically and extracts schemas."""
@@ -175,6 +187,35 @@ async def stream_chat(req: QueryRequest):
         intent = router.classify_intent(req.query)
         if intent["type"] in ["greeting", "invalid_domain"]:
             yield format_sse("answer", {"answer": intent["response"]})
+            return
+
+        if intent["type"] == "conceptual":
+            yield format_sse("pipeline", {"stage": "table_selection", "status": "completed"})
+            yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
+            yield format_sse("pipeline", {
+                "stage": "execution",
+                "status": "completed",
+                "sql": "-- RAG Conceptual Query (No database execution required)",
+                "results": {"columns": ["Source Document", "Definition Snippet"], "rows": [], "row_count": 0}
+            })
+            
+            rag_context = ""
+            if rag_explorer:
+                try:
+                    rag_hits = rag_explorer.retrieve(req.query, top_k=2)
+                    if rag_hits:
+                        rag_context = "\n".join([f"[Source: {hit[0]}]\n{hit[1]}" for hit in rag_hits])
+                        logger.info("Semantic context successfully retrieved from knowledge documents.")
+                except Exception as e:
+                    logger.warning(f"RAG retrieval failed: {e}")
+            
+            explanation = await generator.explain_rag_concept(req.query, rag_context)
+            suggestions = suggester.suggest_followups(req.query, "", {"row_count": 0, "rows": []}, [])
+            
+            yield format_sse("answer", {
+                "answer": explanation,
+                "suggestions": suggestions
+            })
             return
 
         kpi_data = kpi_engine.compile_domain_hints(req.query)

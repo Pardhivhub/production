@@ -808,6 +808,28 @@
         // Trigger connection on Connect click
         connectBtn.addEventListener("click", connectDB);
 
+        // Check for existing database auto-connection on boot
+        async function checkAutoConnect() {
+            try {
+                const response = await fetch("/status");
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "connected") {
+                        isConnected = true;
+                        connBadge.classList.add("connected");
+                        connectBtn.innerText = "Reconnect";
+                        dbInput.value = data.db_url || "";
+                        sendBtn.disabled = false;
+                        renderSchemaBanner(data.schema_info);
+                        console.log("Auto-connected to existing backend session successfully!");
+                    }
+                }
+            } catch (err) {
+                console.warn("Auto-connect check failed:", err);
+            }
+        }
+        checkAutoConnect();
+
         // Serve dynamic chat streaming
         chatForm.addEventListener("submit", async (e) => {
             e.preventDefault();

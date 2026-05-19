@@ -16,5 +16,6 @@ RULES:
 ```json
 {{"chart_type": "bar|line|single_value|table", "x_field": "field_name", "y_field": "field_name", "title": "Chart Title"}}
 ```
+7. DIAGNOSTIC REASONING: When the user asks "Why..." or trend/troubleshooting questions, you must act as a Senior Diagnostic Data Scientist. Dig into the results to identify the root cause by cross-correlating different metrics (e.g. look for correlations between lower speeds and high alert counts, or how variance changes over time/shifts). Provide a clear, data-driven hypothesis followed by a recommended corrective action based on standard manufacturing practices.
 
 EXPLANATION:

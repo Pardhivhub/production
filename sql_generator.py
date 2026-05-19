@@ -37,12 +37,22 @@ class SQLGenerator:
             if table.get("samples"):
                 lines.append(f"  Sample row: {table['samples'][0]}")
         return "\n".join(lines)
-
-    async def generate_sql(self, query: str, schema_info: dict, domain_hints: str, max_retries: int = 2) -> str:
+    async def generate_sql(self, query: str, schema_info: dict, domain_hints: str, max_retries: int = 1) -> str:
         schema_text = self._format_schema(schema_info)
         prompt = SQL_SYSTEM_PROMPT.format(schema_text=schema_text, domain_hints=domain_hints)
         
+        # Explicitly print and log enhanced_hints (domain_hints) and the full system prompt
+        print("\n" + "=" * 60)
+        print("💡 [FORMULA & DOMAIN HINTS REACHING LLM] 💡")
+        print(domain_hints)
+        print("-" * 60)
+        print("🔥 [FULL SQL GENERATOR SYSTEM PROMPT] 🔥")
+        print(prompt)
+        print("=" * 60 + "\n")
+        
+        logger.info(f"Domain hints reaching LLM:\n{domain_hints}")
         logger.info(f"Generating SQL for query: '{query}'")
+        logger.info(f"Full System Prompt sent to LLM:\n{prompt}")
         
         last_error = None
         last_sql = None
@@ -129,4 +139,36 @@ class SQLGenerator:
             return explanation
         except Exception as e:
             logger.error(f"Explanation generation failed: {e}")
+            raise e
+
+    async def explain_rag_concept(self, query: str, rag_context: str) -> str:
+        """
+        Explain a conceptual manufacturing question directly using RAG reference documents.
+        """
+        prompt = f"""You are an expert industrial manufacturing assistant. 
+Explain the following manufacturing concept or term to the user.
+
+User Question: {query}
+
+Retrieved Reference Material:
+{rag_context if rag_context else 'No reference material found.'}
+
+Instructions:
+1. Be clear, precise, and professional.
+2. Directly answer the question using the retrieved reference material.
+3. If the reference material doesn't contain the answer, use your general knowledge of potato chip manufacturing and smart factory systems to provide a helpful, accurate definition.
+
+Answer:"""
+        logger.info(f"Explaining RAG concept for query: '{query}'")
+        try:
+            response = await acompletion(
+                model=f"{settings.LLM_PROVIDER}/{settings.LLM_MODEL}",
+                messages=[{"role": "user", "content": prompt}],
+                api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
+                temperature=0.3,
+                timeout=120
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"RAG Explanation generation failed: {e}")
             raise e

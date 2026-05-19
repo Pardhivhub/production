@@ -38,15 +38,18 @@ class SemanticLayer:
             # Generate descriptions for columns
             enriched_columns = []
             for col in table.get("columns", []):
+                col_name = col.get("name")
                 col_desc = self._generate_column_description(
-                    col.get("name"), 
+                    col_name, 
                     col.get("type"),
                     table.get("samples", [])
                 )
+                synonyms = self.get_column_synonyms(col_name)
                 enriched_columns.append({
                     **col,
                     "description": col_desc,
-                    "business_name": self._to_business_name(col.get("name"))
+                    "business_name": self._to_business_name(col_name),
+                    "synonyms": synonyms
                 })
             
             enriched_table = {

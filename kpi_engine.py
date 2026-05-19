@@ -13,8 +13,8 @@ FORMULAS_CATALOG = {
       "AW": "SUM(actual_weight)",
       "TW": "SUM(target_weight)"
     },
-    "formula": "((SUM(actual_weight) - SUM(target_weight)) / NULLIF(SUM(actual_weight), 0)) * 100",
-    "query": "SELECT ((SUM(actual_weight) - SUM(target_weight)) / NULLIF(SUM(actual_weight), 0)) * 100 AS ega_percent FROM feedback_data",
+    "formula": "ROUND((((SUM(actual_weight) - SUM(target_weight)) / NULLIF(SUM(actual_weight), 0)) * 100)::numeric, 2)",
+    "query": "SELECT ROUND((((SUM(actual_weight) - SUM(target_weight)) / NULLIF(SUM(actual_weight), 0)) * 100)::numeric, 2) AS ega_percent FROM feedback_data",
     "groupable_by": ["variant", "topic", "created_at"],
     "filters": ["variant", "topic"],
     "rounding": 2
@@ -24,18 +24,28 @@ FORMULAS_CATALOG = {
     "aliases": ["average speed", "actual speed", "production speed", "machine speed", "avg speed"],
     "type": "derived_kpi",
     "table": "feedback_data",
-    "formula": "AVG(actual_speed)",
-    "query": "SELECT AVG(actual_speed) AS avg_speed FROM feedback_data",
+    "formula": "ROUND(AVG(actual_speed), 1)",
+    "query": "SELECT ROUND(AVG(actual_speed), 1) AS avg_speed FROM feedback_data",
     "groupable_by": ["variant", "topic"],
     "rounding": 1
+  },
+  "OEE_Performance": {
+    "metric": "OEE_Performance",
+    "aliases": ["oee", "oee performance", "machine performance", "speed efficiency", "overall equipment effectiveness", "average oee"],
+    "type": "derived_kpi",
+    "table": "feedback_data",
+    "formula": "ROUND((AVG(actual_speed) / NULLIF(AVG(target_speed), 0) * 100)::numeric, 2)",
+    "query": "SELECT ROUND((AVG(actual_speed) / NULLIF(AVG(target_speed), 0) * 100)::numeric, 2) AS oee_performance FROM feedback_data",
+    "groupable_by": ["variant", "topic"],
+    "rounding": 2
   },
   "Total_Weight_kg": {
     "metric": "Total_Weight_kg",
     "aliases": ["total production", "total actual weight", "total output", "weight produced", "total yield"],
     "type": "derived_kpi",
     "table": "feedback_data",
-    "formula": "SUM(actual_weight) / 1000.0",
-    "query": "SELECT SUM(actual_weight) / 1000.0 AS total_weight_kg FROM feedback_data",
+    "formula": "ROUND(SUM(actual_weight) / 1000.0, 2)",
+    "query": "SELECT ROUND(SUM(actual_weight) / 1000.0, 2) AS total_weight_kg FROM feedback_data",
     "groupable_by": ["variant"],
     "rounding": 2
   },

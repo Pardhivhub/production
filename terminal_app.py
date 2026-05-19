@@ -78,7 +78,7 @@ async def main():
         conv_context = conversation_memory.get_context(session_id)
 
         # Table selection using semantic LLM architect selection
-        selected = await selector.select_relevant_tables(query, history=conv_context)
+        selected = selector.select_relevant_tables(query, history=conv_context)
         reduced_schema = {"tables": selected["tables"]}
 
         # Retrieve any semantic documentation context via RAG

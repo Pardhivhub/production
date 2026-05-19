@@ -68,11 +68,25 @@ class SchemaEmbedder:
 
     def _table_to_text(self, table: Dict) -> str:
         """Flatten a table dict into a single descriptive string for embedding.
-        Expected keys on *table*: ``name``, ``description`` (optional), ``columns`` (list of dicts with ``name``), ``samples``.
+        Expected keys on *table*: ``name``, ``description`` (optional), ``columns`` (list of dicts with ``name``, ``description``, ``synonyms``), ``samples``.
         """
         name = table.get("name", "")
         description = table.get("description", "")
-        cols = ", ".join([c.get("name", "") for c in table.get("columns", [])])
+
+        # Create a more detailed column string, using the rich data from the Semantic Layer
+        col_descriptions = []
+        for c in table.get("columns", []):
+            col_name = c.get("name", "")
+            col_desc = c.get("description", "")
+            col_synonyms = c.get("synonyms", [])
+            
+            desc_str = f"{col_name}"
+            if col_desc and col_desc != "Unique identifier": # Don't need to state the obvious
+                desc_str += f" ({col_desc})"
+            if col_synonyms:
+                desc_str += f" (also known as: {', '.join(col_synonyms)})"
+            col_descriptions.append(desc_str)
+        cols = ". ".join(col_descriptions)
         
         # Include sample values for better semantic matching
         samples = table.get("samples", [])
@@ -80,7 +94,7 @@ class SchemaEmbedder:
         if samples:
             sample_str = f" Sample values: {str(samples[0])}"
         
-        return f"Table {name}. Description: {description}. Columns: {cols}.{sample_str}"
+        return f"Table: {name}. Description: {description}. Columns: {cols}.{sample_str}"
 
     def embed_schema(self, schema: Dict):
         """Index all tables from a ``schema`` dict.
