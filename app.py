@@ -21,6 +21,8 @@ from query_suggester import QuerySuggester
 from semantic_layer import SemanticLayer
 from alert_system import AlertSystem
 from nl_filter_parser import NLFilterParser
+from conversation_manager import ConversationManager
+from constraint_aware_query_generator import ConstraintAwareQueryGenerator
 from backend.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -51,9 +53,13 @@ analytics_engine: Optional[AnalyticsEngine] = None
 alert_system: Optional[AlertSystem] = None
 semantic_layer: Optional[SemanticLayer] = None
 
+# Context-aware conversation tracking
+conversation_manager = ConversationManager(max_history=20)
+query_generator: Optional[ConstraintAwareQueryGenerator] = None
+
 @app.on_event("startup")
 async def startup_event():
-    global db_connector, active_schema, rag_explorer, analytics_engine, alert_system, semantic_layer
+    global db_connector, active_schema, rag_explorer, analytics_engine, alert_system, semantic_layer, query_generator
     logger.info(f"Initializing auto-connection to default database: {settings.DATABASE_URL}")
     try:
         connector = DatabaseConnector(settings.DATABASE_URL)
@@ -69,6 +75,9 @@ async def startup_event():
         # Initialize analytics and alert systems
         analytics_engine = AnalyticsEngine(connector)
         alert_system = AlertSystem(connector)
+        
+        # Initialize constraint-aware query generator
+        query_generator = ConstraintAwareQueryGenerator(conversation_manager)
         
         logger.info("Auto-connection to default database successful!")
         
@@ -127,7 +136,7 @@ async def get_connection_status():
 @app.post("/connect")
 async def connect_database(req: ConnectRequest):
     """Establishes database connection dynamically and extracts schemas."""
-    global db_connector, active_schema, analytics_engine, alert_system, semantic_layer
+    global db_connector, active_schema, analytics_engine, alert_system, semantic_layer, query_generator
     db_url = req.db_url.strip() if req.db_url else settings.DATABASE_URL
     try:
         connector = DatabaseConnector(db_url)
@@ -145,6 +154,9 @@ async def connect_database(req: ConnectRequest):
         # Initialize analytics and alerts
         analytics_engine = AnalyticsEngine(connector)
         alert_system = AlertSystem(connector)
+        
+        # Initialize constraint-aware query generator
+        query_generator = ConstraintAwareQueryGenerator(conversation_manager)
         
         return {
             "status": "success",
@@ -177,6 +189,9 @@ async def stream_chat(req: QueryRequest):
         return StreamingResponse(fallback_stream(), media_type="text/event-stream")
 
     async def chat_event_generator():
+        # Add user message to conversation manager
+        conversation_manager.add_user_message(req.query)
+        
         router = QueryRouter(active_schema)
         kpi_engine = KPIEngine(active_schema)
         table_selector = TableSelector(active_schema)
@@ -237,7 +252,22 @@ async def stream_chat(req: QueryRequest):
             if conv_context:
                 enhanced_hints = f"{conv_context}\n\n{enhanced_hints}"
             
-            sql = await generator.generate_sql(req.query, reduced_schema, enhanced_hints)
+            # Add conversation context from conversation_manager
+            full_context = conversation_manager.get_conversation_context(last_n=3)
+            if full_context:
+                enhanced_hints = f"{full_context}\n\n{enhanced_hints}"
+            
+            # Generate SQL with LLM
+            llm_generated_sql = await generator.generate_sql(req.query, reduced_schema, enhanced_hints)
+            
+            # Validate and modify SQL based on user constraints
+            if query_generator:
+                sql = query_generator.generate_query(req.query, active_schema, llm_generated_sql)
+                if sql != llm_generated_sql:
+                    logger.info(f"Query modified by constraint validator:\nOriginal: {llm_generated_sql}\nModified: {sql}")
+            else:
+                sql = llm_generated_sql
+            
             yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
         except Exception as e:
             yield format_sse("error", {
@@ -306,6 +336,18 @@ async def stream_chat(req: QueryRequest):
         try:
             explanation = await generator.explain_results(req.query, sql, results, extra_context=extra_context)
             
+            # If results are empty/zero, automatically suggest alternative tables
+            row_count = results.get('row_count', 0)
+            is_zero_result = row_count == 0 or (row_count == 1 and results.get('rows') and list(results['rows'][0].values())[0] == 0)
+            
+            if is_zero_result and selected_tables:
+                # Find alternative tables that might have the data
+                all_tables = [t['name'] for t in active_schema.get('tables', [])]
+                alternative_tables = [t for t in all_tables if t not in selected_tables and 'feeder' in t.lower()]
+                
+                if alternative_tables:
+                    explanation += f"\n\n💡 **Suggestion**: The '{selected_tables[0]}' table returned no results. You might want to check these alternative tables: {', '.join(alternative_tables[:3])}"
+            
             if auto_insights:
                 explanation += auto_insights
             
@@ -313,6 +355,13 @@ async def stream_chat(req: QueryRequest):
             if results.get('rows') and len(results['rows']) > 0:
                 result_summary = f"{results['rows'][0]}"
             conversation_memory.add_turn(req.session_id, req.query, sql, result_summary)
+            
+            # Add assistant response to conversation manager
+            conversation_manager.add_assistant_message(
+                explanation,
+                sql_query=sql,
+                query_result=results
+            )
             
             suggestions = suggester.suggest_followups(req.query, sql, results, selected_tables)
             
@@ -363,3 +412,27 @@ async def get_insights(table_name: str, metric_column: str):
         "trends": trends,
         "time_patterns": time_patterns
     }
+
+@app.get("/conversation/status")
+async def get_conversation_status():
+    """Get current conversation state and active constraints."""
+    return conversation_manager.get_summary()
+
+@app.post("/conversation/clear")
+async def clear_conversation_constraints():
+    """Clear all active user constraints."""
+    conversation_manager.clear_all_constraints()
+    return {"status": "success", "message": "All conversation constraints cleared"}
+
+@app.get("/conversation/history")
+async def get_conversation_history():
+    """Get recent conversation history."""
+    context = conversation_manager.get_conversation_context(last_n=10)
+    return {
+        "context": context,
+        "active_constraints": conversation_manager.get_active_constraints()
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

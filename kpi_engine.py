@@ -97,6 +97,94 @@ RELATIONSHIPS_CATALOG = [
     "to_column": "id",
     "type": "one-to-many",
     "description": "Link hardware feeder metadata to production feedback logs"
+  },
+  {
+    "from_table": "ega_details_data",
+    "from_column": "machine_id",
+    "to_table": "oee_details_data",
+    "to_column": "machine_id",
+    "type": "many-to-many",
+    "description": "Link machine production data (EGA) with OEE metrics via machine_id"
+  },
+  {
+    "from_table": "ega_details_data",
+    "from_column": "loop_id",
+    "to_table": "oee_details_data",
+    "to_column": "loop_id",
+    "type": "many-to-many",
+    "description": "Link production loops across EGA and OEE tables"
+  },
+  {
+    "from_table": "ega_details_data",
+    "from_column": "grammage",
+    "to_table": "oee_details_data",
+    "to_column": "grammage",
+    "type": "many-to-many",
+    "description": "Link by SKU/grammage"
+  },
+  {
+    "from_table": "ega_details_data",
+    "from_column": "variant",
+    "to_table": "oee_details_data",
+    "to_column": "variant",
+    "type": "many-to-many",
+    "description": "Link product variant data between EGA and OEE"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "machine_id",
+    "to_table": "ega_details_data",
+    "to_column": "machine_id",
+    "type": "many-to-many",
+    "description": "Link wastage records to machine production data"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "line_id",
+    "to_table": "ega_details_data",
+    "to_column": "loop_id",
+    "type": "many-to-many",
+    "description": "Link production loop/line for wastage reporting"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "grammage",
+    "to_table": "ega_details_data",
+    "to_column": "grammage",
+    "type": "many-to-many",
+    "description": "Link wastage records to SKU/grammage of production"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "shift",
+    "to_table": "ega_details_data",
+    "to_column": "start_time",
+    "type": "shift-based",
+    "description": "Shift-wise link based on start_time in production tables"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "operator_name",
+    "to_table": "employees_list",
+    "to_column": "name",
+    "type": "many-to-one",
+    "description": "Link operator in wastage record to employee master"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "jta_name",
+    "to_table": "employees_list",
+    "to_column": "name",
+    "type": "many-to-one",
+    "description": "Link JTA in wastage record to employee master"
+  },
+  {
+    "from_table": "wastage_records",
+    "from_column": "shift_incharge_name",
+    "to_table": "employees_list",
+    "to_column": "name",
+    "type": "many-to-one",
+    "description": "Link shift in-charge to employee master"
   }
 ]
 
@@ -117,6 +205,39 @@ class KPIEngine:
         hints = []
         corrections = {}
         matched_tables = set()
+
+        # Prioritize feedback_data for generic 'rf' / 'feeder' queries
+        if any(w in q_lower for w in ["rf", "feeder", "amplitude", "worked", "zero"]):
+            # Specific check for counting unique RFs/feeders (which are columns, not rows)
+            if "unique" in q_lower:
+                hints.append(
+                    "- UNIQUE RF/FEEDER COUNT RULE: The user is asking for the number of unique radial feeders (RFs) in the project, "
+                    "which are defined by the unique 'rf1' through 'rf9' columns in the 'feedback_data' table. "
+                    "To calculate this correctly, you MUST write a query targeting the 'information_schema.columns' catalog "
+                    "to count the distinct columns matching 'rf%_amplitude' in 'feedback_data'.\n"
+                    "Exact SQL to generate: `SELECT COUNT(DISTINCT column_name) FROM information_schema.columns WHERE table_name = 'feedback_data' AND column_name LIKE 'rf%_amplitude'`"
+                )
+            else:
+                hints.append(
+                    "- TABLE PRIORITIZATION HINT: The 'feedback_data' table (16,420 rows) is the primary production database "
+                    "containing live telemetry logs. Columns 'rf1_amplitude' through 'rf9_amplitude', 'rf1_weight_avg' through 'rf9_weight_avg', "
+                    "and 'rf1_worked_count' through 'rf9_worked_count' represent the 9 radial feeders (RF 1 to RF 9). "
+                    "ALWAYS query 'feedback_data' for active production stats, OEE, speeds, and feeder amplitudes. "
+                    "Do NOT use 'rf_production_batch_a01' (which contains only 3 test batch rows) unless the user explicitly asks for "
+                    "'batch a01' or 'batch production'."
+                )
+            matched_tables.add("feedback_data")
+
+        # Handle 'machine' and 'alert' mapping to feedback_data.topic directly
+        if "alert" in q_lower and any(w in q_lower for w in ["machine", "weigher", "topic"]):
+            hints.append(
+                "- MACHINE ALERT RULE: The 'feedback_data' table contains live alert logs for various machines/weighers. "
+                "In 'feedback_data', each machine/weigher is identified by the 'topic' column (e.g. 'weigher13_c2'). "
+                "Do NOT join with 'wastage_records' or any other table to find machine-specific alerts. "
+                "To find the machine with the highest alerts, count the alert rows grouped by 'topic' directly in 'feedback_data'.\n"
+                "Correct SQL query structure: `SELECT topic AS machine_id, COUNT(*) AS alert_count FROM feedback_data WHERE alert IS NOT NULL AND alert != '' AND alert != '-' GROUP BY topic ORDER BY alert_count DESC LIMIT 1`"
+            )
+            matched_tables.add("feedback_data")
 
         # 1. Math aggregate and catalog metric detection
         for kpi_id, meta in self.kpi_formulas.items():
@@ -141,9 +262,11 @@ class KPIEngine:
             alias_num = label.split()[0].lower() # 'shift 1'
             if shift_name in q_lower or alias_num in q_lower or label.lower() in q_lower:
                 hints.append(
-                    f"- SHIFT FILTER DETECTED ({label.upper()}): Filter timestamps using shift hours "
-                    f"between '{start_t}' and '{end_t}'. Note: For overnight night shifts (22:00:00 to 06:00:00), "
-                    f"use a crossover check: `(timestamp >= '22:00:00' OR timestamp < '06:00:00')`."
+                    f"- SHIFT FILTER DETECTED ({label.upper()}): When calculating averages or metrics from 'feedback_data' over a shift, "
+                    f"do NOT join with the 'shift_assignments' table (which is only a scheduling roster). "
+                    f"Instead, filter the telemetry timestamp column (`unix_timestamp::time` in 'feedback_data') directly "
+                    f"using shift hours between '{start_t}' and '{end_t}'.\n"
+                    f"Specifically, for overnight night shifts, you MUST filter using: `(unix_timestamp::time >= '22:00:00' OR unix_timestamp::time < '06:00:00')`."
                 )
 
         # 3. Fuzzy Spelling & Column/Table Correction
@@ -195,6 +318,39 @@ class KPIEngine:
                         f"use: `JOIN {to_t} ON {from_t}.{rel['from_column']} = {to_t}.{rel['to_column']}` "
                         f"({rel['description']})."
                     )
+
+        # 5. Counting and Filtering Rules
+        counting_keywords = ["how many", "count", "total number", "number of"]
+        listing_keywords = ["list all", "show all", "give me all", "display all", "get all"]
+        filtering_keywords = ["where", "with", "having", ">", "<", "=", "above", "below", "greater", "less"]
+        
+        has_counting = any(kw in q_lower for kw in counting_keywords)
+        has_listing = any(kw in q_lower for kw in listing_keywords)
+        has_filtering = any(kw in q_lower for kw in filtering_keywords)
+        
+        if has_counting or has_listing:
+            if has_filtering:
+                hints.append(
+                    "- COUNTING + FILTERING RULE: User wants both count AND details. "
+                    "Return ALL matching rows with SELECT * or SELECT [columns] WHERE [condition]. "
+                    "Do NOT use LIMIT. The explainer will count and list all items."
+                )
+            elif "only" in q_lower or "just" in q_lower:
+                hints.append(
+                    "- COUNT-ONLY RULE: User wants only the count. Use SELECT COUNT(*) or COUNT(DISTINCT column)."
+                )
+            else:
+                hints.append(
+                    "- TOTAL COUNT RULE: User wants to count all items. "
+                    "Return ALL rows with SELECT * FROM table. The explainer will count and report the total."
+                )
+        
+        if has_listing and has_filtering:
+            hints.append(
+                "- LISTING RULE: Return ALL matching rows without LIMIT. "
+                "Include relevant columns for context (IDs, names, metrics). "
+                "The explainer will state: 'There are X items with [condition]' and list all of them."
+            )
 
         return {
             "hints": "\n".join(hints) if hints else "No specific manufacturing templates detected.",

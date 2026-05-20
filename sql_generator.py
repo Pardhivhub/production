@@ -30,13 +30,16 @@ class SQLGenerator:
     def _format_schema(self, schema_info: dict) -> str:
         lines = []
         for table in schema_info.get("tables", []):
-            lines.append(f"Table: {table['name']}")
+            row_count = table.get("row_count", 0)
+            status = f"({row_count:,} rows)" if row_count > 0 else "(0 rows - EMPTY)"
+            lines.append(f"Table: {table['name']} {status}")
             cols = [f"{c['name']} ({c['type']})" for c in table.get("columns", [])]
             lines.append("  Columns: " + ", ".join(cols))
             # Include sample rows for better LLM context
             if table.get("samples"):
                 lines.append(f"  Sample row: {table['samples'][0]}")
         return "\n".join(lines)
+    
     async def generate_sql(self, query: str, schema_info: dict, domain_hints: str, max_retries: int = 1) -> str:
         schema_text = self._format_schema(schema_info)
         prompt = SQL_SYSTEM_PROMPT.format(schema_text=schema_text, domain_hints=domain_hints)
@@ -114,13 +117,38 @@ class SQLGenerator:
 
     async def explain_results(self, query: str, sql: str, results: dict, extra_context: str = "") -> str:
         sample_results = json.dumps(results.get("rows", [])[:20], indent=2)
+        row_count = results.get("row_count", 0)
+        
+        # Enhanced prompt for empty results
+        empty_result_guidance = ""
+        if row_count == 0 or (row_count == 1 and results.get("rows") and list(results["rows"][0].values())[0] == 0):
+            empty_result_guidance = """\n\nIMPORTANT: The result is empty or zero. You MUST:
+1. Clearly state what was found (or not found)
+2. Provide 2-3 possible reasons why this might be the case
+3. Suggest alternative tables or approaches the user could try
+4. Ask helpful follow-up questions to guide the user
+
+Example format:
+"Based on the query results, there are 0 [items] in the [table] table. This could mean:
+- Possibility 1: [reason]
+- Possibility 2: [reason]
+- Possibility 3: [reason]
+
+To investigate further, you might want to:
+- Check [alternative table/approach]
+- Verify [data condition]
+
+Would you like me to check [specific suggestion]?"
+"""
+        
         prompt = EXPLAINER_PROMPT.format(
             query=query,
             sql=sql,
             columns=results.get("columns", []),
-            row_count=results.get("row_count", 0),
+            row_count=row_count,
             sample_results=sample_results
-        )
+        ) + empty_result_guidance
+        
         if extra_context:
             prompt = f"ADDITIONAL CONTEXT FROM RAG DOCUMENTS:\n{extra_context}\n\n---\n\n{prompt}"
         
@@ -132,7 +160,7 @@ class SQLGenerator:
                     {"role": "user", "content": prompt}
                 ],
                 api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
-                temperature=0.2,
+                temperature=0.3,  # Slightly higher for more creative suggestions
                 timeout=120
             )
             explanation = response.choices[0].message.content.strip()

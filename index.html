@@ -867,7 +867,7 @@
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-                let currentEvent = "";
+                let buffer = "";
 
                 // Temporary accumulators to avoid re-rendering layout continuously
                 let currentCorrections = null;
@@ -878,45 +878,62 @@
                     const { done, value } = await reader.read();
                     if (done) break;
 
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split("\n");
+                    buffer += decoder.decode(value, { stream: true });
+                    const parts = buffer.split("\n\n");
+                    buffer = parts.pop();
 
-                    for (const line of lines) {
-                        if (line.startsWith("event: ")) {
-                            currentEvent = line.replace("event: ", "").trim();
-                        } else if (line.startsWith("data: ")) {
-                            const data = JSON.parse(line.replace("data: ", ""));
-                            
-                            // Check if event is spelling correction
-                            if (currentEvent === "spelling_correction") {
-                                renderSpellingCorrections(contentEl, data.corrections);
-                            } 
-                            // Check if standard data chunk
-                            else if (data.answer) {
-                                bubbleEl.innerText = data.answer;
-                                if (data.sql && data.sql !== currentSql) {
-                                    currentSql = data.sql;
-                                    renderSqlBlock(contentEl, data.sql);
-                                }
-                                if (data.results && data.results !== currentResults) {
-                                    currentResults = data.results;
-                                    renderResultsTable(contentEl, data.results);
-                                }
+                    for (const part of parts) {
+                        if (!part.trim()) continue;
+
+                        const lines = part.split("\n");
+                        let currentEvent = "";
+                        let dataText = "";
+
+                        for (const line of lines) {
+                            if (line.startsWith("event: ")) {
+                                currentEvent = line.replace("event: ", "").trim();
+                            } else if (line.startsWith("data: ")) {
+                                dataText = line.replace("data: ", "").trim();
                             }
-                            // Check if backend returned pipeline stage update containing intermediate outputs
-                            else if (data.sql || data.results) {
-                                if (data.sql && data.sql !== currentSql) {
-                                    currentSql = data.sql;
-                                    renderSqlBlock(contentEl, data.sql);
+                        }
+
+                        if (dataText) {
+                            try {
+                                const data = JSON.parse(dataText);
+                                
+                                // Check if event is spelling correction
+                                if (currentEvent === "spelling_correction") {
+                                    renderSpellingCorrections(contentEl, data.corrections);
+                                } 
+                                // Check if standard data chunk
+                                else if (data.answer) {
+                                    bubbleEl.innerText = data.answer;
+                                    if (data.sql && data.sql !== currentSql) {
+                                        currentSql = data.sql;
+                                        renderSqlBlock(contentEl, data.sql);
+                                    }
+                                    if (data.results && data.results !== currentResults) {
+                                        currentResults = data.results;
+                                        renderResultsTable(contentEl, data.results);
+                                    }
                                 }
-                                if (data.results && data.results !== currentResults) {
-                                    currentResults = data.results;
-                                    renderResultsTable(contentEl, data.results);
+                                // Check if backend returned pipeline stage update containing intermediate outputs
+                                else if (data.sql || data.results) {
+                                    if (data.sql && data.sql !== currentSql) {
+                                        currentSql = data.sql;
+                                        renderSqlBlock(contentEl, data.sql);
+                                    }
+                                    if (data.results && data.results !== currentResults) {
+                                        currentResults = data.results;
+                                        renderResultsTable(contentEl, data.results);
+                                    }
                                 }
-                            }
-                            // Check if pipeline generated a detailed error
-                            else if (currentEvent === "error") {
-                                renderErrorBadge(contentEl, data);
+                                // Check if pipeline generated a detailed error
+                                else if (currentEvent === "error") {
+                                    renderErrorBadge(contentEl, data);
+                                }
+                            } catch (e) {
+                                console.error("Failed to parse SSE JSON:", e, dataText);
                             }
                         }
                     }

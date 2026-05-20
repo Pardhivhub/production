@@ -20,5 +20,28 @@ RULES:
 10. NO ID ARITHMETIC: Do NOT multiply unique identifier fields (like `meter_id`, `feeder_id`, `id`) by metric variables (like `cost`, `kwh_consumed`, or `weight`). Treat IDs strictly as groupable keys or join conditions.
 11. DIAGNOSTIC QUERY DESIGN: When the user asks diagnostic, trend, or troubleshooting questions (e.g. starting with "Why...", "Is there a trend...", "Compare..."), do NOT write a query that returns a single aggregate value or a single row. Instead, write a query that retrieves a rich, detailed dataset (e.g. daily/hourly groupings or broken down by variant/shift) and includes potential correlating parameters (like alert counts, average speeds, target weights, or silo levels) so the explainer can perform a comprehensive root-cause analysis.
 
+12. COUNTING RULES - ALWAYS RETURN BOTH DETAILS AND COUNT:
+    a) When user asks "how many total" or "count all" (e.g., "how many total feeders", "count all machines"), you MUST:
+       - Return ALL individual rows with their details using SELECT * or SELECT [relevant columns]
+       - Include the total count in the response (the explainer will count and report it)
+       - Example: For "how many total feeders", write: SELECT * FROM feeders (NOT just SELECT COUNT(*))
+    
+    b) When user asks "list all [items] where [condition]" (e.g., "list all feeders where EGA > 5"), you MUST:
+       - Return ALL matching rows with full details: SELECT * FROM feeders WHERE ega_percent > 5
+       - The explainer will automatically count and report: "Here are the X feeders with EGA > 5: [details]"
+       - NEVER use LIMIT unless explicitly requested by the user
+    
+    c) COMBINED QUERIES: When user asks for both listing AND counting (e.g., "show all feeders with speed < 100 and tell me how many"), write a single query that returns all matching rows. The explainer will provide both the list and the count.
+    
+    d) COUNT-ONLY EXCEPTIONS: Only use SELECT COUNT(*) or COUNT(DISTINCT column) when:
+       - User explicitly asks ONLY for the count/number without wanting to see details
+       - User says "just tell me the count" or "only the number"
+       - User asks for distinct counts: "how many unique feeders"
+
+13. FILTERING WITH AGGREGATES: When filtering on calculated metrics (e.g., "feeders where average speed > 100"):
+    - Use GROUP BY with HAVING clause for aggregate filters
+    - Example: SELECT feeder_id, AVG(speed) as avg_speed FROM data GROUP BY feeder_id HAVING AVG(speed) > 100
+    - Return all matching groups with their calculated values, not just the count
+
 OUTPUT FORMAT:
 Return only the SQL string. E.g.: SELECT ... FROM ... WHERE ...

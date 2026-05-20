@@ -107,7 +107,7 @@ class QueryRouter:
                 # Add table name parts
                 schema_keywords.add(t_name.lower())
                 for part in t_name.replace("_", " ").split():
-                    if len(part) > 2:
+                    if len(part) >= 2:
                         schema_keywords.add(part.lower())
                 
                 # Add column name parts
@@ -116,7 +116,7 @@ class QueryRouter:
                     c_name = self._get_column_name(col)
                     schema_keywords.add(c_name.lower())
                     for cpart in c_name.replace("_", " ").split():
-                        if len(cpart) > 2:
+                        if len(cpart) >= 2:
                             schema_keywords.add(cpart.lower())
 
             # Common database analytical words
@@ -128,24 +128,47 @@ class QueryRouter:
                 "oee", "ega", "shift", "efficiency", "stopped", "downtime", "wastage"
             }
             
-            words_in_query = set(q_lower.replace("?", " ").replace(",", " ").split())
+            # Replace underscores, hyphens, and other punctuation with spaces before splitting
+            q_clean = q_lower.replace("_", " ").replace("-", " ").replace("?", " ").replace(",", " ").replace(".", " ")
+            words_in_query = set(q_clean.split())
+            
+            # Singularize query words for robust plural matching (e.g. "feeders" -> "feeder")
+            normalized_query_words = set()
+            for w in words_in_query:
+                normalized_query_words.add(w)
+                if w.endswith("s") and len(w) > 3:
+                    normalized_query_words.add(w[:-1])
+                if w.endswith("es") and len(w) > 4:
+                    normalized_query_words.add(w[:-2])
             
             # Check if there is any intersection with table/column keywords or generic db terminology
-            has_db_term = words_in_query.intersection(schema_keywords) or words_in_query.intersection(db_generic_words)
+            has_db_term = normalized_query_words.intersection(schema_keywords) or normalized_query_words.intersection(db_generic_words)
             
             # Additional check: If query has numbers or common operators, let it pass
             has_operators = any(op in q_lower for op in ("=", ">", "<", "percent", "%", "average", "sum"))
             
             if not has_db_term and not has_operators and len(words_in_query) > 2:
                 # Prompt is likely unrelated to the database schema
-                table_names = ", ".join([f"`{self._get_table_name(t)}`" for t in tables])
+                friendly_message = (
+                    "### 🔍 Industrial Domain Guardrail\n"
+                    "I couldn't find a direct match for that query in your connected factory schema. "
+                    "Since you may not know the physical table names, here are the main industrial areas I can help you analyze and query right now:\n\n"
+                    "📊 **OEE & Production Performance** (actual vs target counts, speeds, OEE %, shift stats)\n"
+                    "⚙️ **Feeder Calibration & Telemetry** (feeder amplitudes, weights, zero counts, worked counts)\n"
+                    "⚡ **Energy & Utility Consumption** (electricity costs, hourly/daily kwh demand)\n"
+                    "🍯 **Silo Inventory & Raw Materials** (sugar levels, packaging stock levels)\n"
+                    "🌡️ **Environmental Logs** (humidity levels, temperatures, zone logs)\n"
+                    "👥 **Staff Schedules & Certifications** (scheduled operator shifts, training levels)\n\n"
+                    "💡 **Try asking a business question like:**\n"
+                    "* *'What is the average OEE of weigher 3?'*\n"
+                    "* *'Check the status and worked count for feeder 9.'*\n"
+                    "* *'Show me our energy consumption and cost over the last week.'*\n"
+                    "* *'Are there any silos that need refilling soon?'*\n\n"
+                    "Please ask any question related to these topics, and I will automatically write the SQL and get your live results!"
+                )
                 return {
                     "type": "invalid_domain",
-                    "response": (
-                        f"I detected that your query is likely unrelated to the connected database tables. "
-                        f"Currently, I can query the following connected tables: {table_names}.\n\n"
-                        f"Please ask a question related to these tables or their columns!"
-                    )
+                    "response": friendly_message
                 }
 
         return {"type": "sql_query"}

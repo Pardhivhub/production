@@ -65,11 +65,10 @@ class SemanticLayer:
     
     async def _generate_table_description(self, table: Dict) -> str:
         """
-        Use LLM to generate a business-friendly table description.
+        Generate a business-friendly table description programmatically.
         """
         table_name = table.get("name")
         columns = [c.get("name") for c in table.get("columns", [])]
-        samples = table.get("samples", [])
         
         # Quick heuristic descriptions for common patterns
         name_lower = table_name.lower()
@@ -83,29 +82,16 @@ class SemanticLayer:
             return f"Environmental conditions monitoring (temperature, humidity, etc.)"
         elif "error" in name_lower or "log" in name_lower or "event" in name_lower:
             return f"System events, errors, and operational logs"
-        
-        # Fallback: Use LLM for complex cases
-        try:
-            prompt = f"""Analyze this database table and provide a 1-sentence business description:
-
-Table: {table_name}
-Columns: {', '.join(columns[:10])}
-Sample data: {samples[0] if samples else 'No samples'}
-
-Provide only the description, no extra text."""
-
-            response = await acompletion(
-                model=f"{settings.LLM_PROVIDER}/{settings.LLM_MODEL}",
-                messages=[{"role": "user", "content": prompt}],
-                api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
-                temperature=0.3,
-                timeout=30
-            )
+        elif "setting" in name_lower or "config" in name_lower:
+            return f"Machine parameters, limits, and golden threshold settings"
+        elif "assign" in name_lower or "schedule" in name_lower:
+            return f"Staff scheduling, shifts, and team assignments"
+        elif "cert" in name_lower or "train" in name_lower:
+            return f"Operator certifications, skills, and training levels"
+        elif "order" in name_lower or "client" in name_lower or "sale" in name_lower:
+            return f"Sales orders, client specifications, and shipment records"
             
-            return response.choices[0].message.content.strip()
-        except Exception as e:
-            logger.warning(f"LLM description generation failed for {table_name}: {e}")
-            return f"Data table containing {', '.join(columns[:3])} and related information"
+        return f"Data table containing {', '.join(columns[:3])} and related industrial information"
     
     def _generate_column_description(self, col_name: str, col_type: str, samples: List[Dict]) -> str:
         """

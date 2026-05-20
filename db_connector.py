@@ -59,9 +59,11 @@ class DatabaseConnector:
                         # Map row values to columns and serialize decimals
                         row_dict = {}
                         for col, val in zip(columns, row):
-                            # Convert decimal values to standard float for JSON serialization
+                            # Convert decimal and datetime values for JSON serialization
                             if hasattr(val, "quantize") or type(val).__name__ == "Decimal":
                                 row_dict[col] = float(val)
+                            elif hasattr(val, "isoformat"):
+                                row_dict[col] = val.isoformat()
                             else:
                                 row_dict[col] = val
                         rows.append(row_dict)
@@ -121,13 +123,31 @@ class DatabaseConnector:
                         rows = sample_res.all()
                         col_names = [c for c in sample_res.keys()]
                         for row in rows:
-                            sample_rows.append(dict(zip(col_names, row)))
+                            row_dict = {}
+                            for col, val in zip(col_names, row):
+                                if hasattr(val, "quantize") or type(val).__name__ == "Decimal":
+                                    row_dict[col] = float(val)
+                                elif hasattr(val, "isoformat"):
+                                    row_dict[col] = val.isoformat()
+                                else:
+                                    row_dict[col] = val
+                            sample_rows.append(row_dict)
                     except Exception:
                         sample_rows = []
+                    
+                    # Retrieve the row count for the table
+                    row_count = 0
+                    try:
+                        count_res = await conn.execute(text(f"SELECT COUNT(*) FROM {table};"))
+                        row_count = count_res.scalar()
+                    except Exception:
+                        row_count = 0
+                        
                     tables.append({
                         "name": table,
                         "columns": columns,
-                        "samples": sample_rows
+                        "samples": sample_rows,
+                        "row_count": row_count
                     })
             return {"tables": tables}
         except Exception as e:
