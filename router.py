@@ -90,7 +90,7 @@ class QueryRouter:
         db_indicators = [
             "calculate", "show me", "sum", "average", "total", "count", 
             "maximum", "minimum", "highest", "lowest", "limit", "record", 
-            "data in", "table", "value", "level"
+            "data in", "table", "value", "level", "percent", "%", "trend"
         ]
         has_db_indicator = any(indicator in q_lower for indicator in db_indicators)
         

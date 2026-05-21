@@ -238,7 +238,24 @@ class KPIEngine:
                 "Correct SQL query structure: `SELECT topic AS machine_id, COUNT(*) AS alert_count FROM feedback_data WHERE alert IS NOT NULL AND alert != '' AND alert != '-' GROUP BY topic ORDER BY alert_count DESC LIMIT 1`"
             )
             matched_tables.add("feedback_data")
-
+        # Handle queries about feeders that have EGA values
+        if "feeder" in q_lower and "ega" in q_lower:
+            # Optional numeric threshold, e.g., 'ega > 2.5'
+            import re
+            thresh_match = re.search(r"ega\s*([<>]=?)\s*([0-9]*\.?[0-9]+)", q_lower)
+            if thresh_match:
+                op, val = thresh_match.groups()
+                hints.append(
+                    f"- FEEDER EGA RULE: Join 'feedback_data' (topic) with 'ega_details_data' (machine_id) and return feeder columns where ega_percent {op} {val}. "
+                    "SQL template: `SELECT fd.topic, fd.rf1_amplitude, fd.rf2_amplitude, fd.rf3_amplitude, fd.rf4_amplitude, fd.rf5_amplitude, fd.rf6_amplitude, fd.rf7_amplitude, fd.rf8_amplitude, fd.rf9_amplitude, eg.ega_percent FROM feedback_data fd JOIN ega_details_data eg ON fd.topic = eg.machine_id WHERE eg.ega_percent " + op + " " + val + "`"
+                )
+                matched_tables.update({"feedback_data", "ega_details_data"})
+            else:
+                hints.append(
+                    "- FEEDER EGA RULE: Join 'feedback_data' and 'ega_details_data' on topic = machine_id and return all feeder columns with their EGA percent. "
+                    "SQL template: `SELECT fd.topic, fd.rf1_amplitude, fd.rf2_amplitude, fd.rf3_amplitude, fd.rf4_amplitude, fd.rf5_amplitude, fd.rf6_amplitude, fd.rf7_amplitude, fd.rf8_amplitude, fd.rf9_amplitude, eg.ega_percent FROM feedback_data fd JOIN ega_details_data eg ON fd.topic = eg.machine_id`"
+                )
+                matched_tables.update({"feedback_data", "ega_details_data"})
         # 1. Math aggregate and catalog metric detection
         for kpi_id, meta in self.kpi_formulas.items():
             aliases = meta.get("aliases", [kpi_id.replace("_", " ").lower()])

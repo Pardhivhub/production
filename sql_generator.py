@@ -116,13 +116,32 @@ class SQLGenerator:
         raise Exception(f"SQL generation failed after {max_retries + 1} attempts")
 
     async def explain_results(self, query: str, sql: str, results: dict, extra_context: str = "") -> str:
-        sample_results = json.dumps(results.get("rows", [])[:20], indent=2)
+        try:
+            sample_results = json.dumps(results.get("rows", [])[:20], indent=2)
+        except Exception as e:
+            logger.error(f"Error serializing results: {e}")
+            sample_results = str(results.get("rows", []))
+        
         row_count = results.get("row_count", 0)
         
-        # Enhanced prompt for empty results
+        is_count_query = False
+        if row_count == 1 and results.get("rows"):
+            try:
+                row_data = results["rows"][0]
+                if isinstance(row_data, dict) and len(row_data) == 1:
+                    key = list(row_data.keys())[0]
+                    if key.lower() in ["count", "total", "count(*)"]:
+                        is_count_query = True
+            except Exception:
+                pass
+        
         empty_result_guidance = ""
-        if row_count == 0 or (row_count == 1 and results.get("rows") and list(results["rows"][0].values())[0] == 0):
-            empty_result_guidance = """\n\nIMPORTANT: The result is empty or zero. You MUST:
+        if row_count == 0 or (is_count_query and results.get("rows") and len(results["rows"]) > 0):
+            try:
+                if is_count_query:
+                    count_value = list(results["rows"][0].values())[0]
+                    if count_value == 0:
+                        empty_result_guidance = """\n\nIMPORTANT: The result is empty or zero. You MUST:
 1. Clearly state what was found (or not found)
 2. Provide 2-3 possible reasons why this might be the case
 3. Suggest alternative tables or approaches the user could try
@@ -140,6 +159,8 @@ To investigate further, you might want to:
 
 Would you like me to check [specific suggestion]?"
 """
+            except Exception:
+                pass
         
         prompt = EXPLAINER_PROMPT.format(
             query=query,
