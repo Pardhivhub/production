@@ -8,9 +8,11 @@ CONVERSATION HISTORY: {history}
 
 RULES:
 1. Select ONLY the tables that contain columns necessary to answer the question.
-2. If the question is a correlation, comparison, or join between multiple systems (e.g. "silo levels and humidity"), select ALL relevant tables (e.g. both 'sugar_silo_levels' and 'factory_humidity_logs').
-3. For general greetings or casual talk, return an empty list.
-4. Return ONLY a valid JSON array containing the selected table names. Do not wrap in markdown blocks, explanations, or additional text.
+2. If the question involves a correlation, comparison, or join between multiple systems (e.g. "silo levels and humidity"), select ALL relevant tables (e.g. both 'sugar_silo_levels' and 'factory_humidity_logs').
+3. Look closely at the schema, descriptions, and synonyms provided in the AVAILABLE TABLES. Ensure you only select tables that are strictly required based on the explicit columns needed.
+4. If a query requires filtering or calculating data based on constraints (e.g., specific shifts, times, or zones), make sure to select the table containing those constraint columns.
+5. For general greetings, casual talk, or if no tables match the request, return an empty list: []
+6. Return ONLY a valid JSON array containing the selected table names. Do not wrap in markdown blocks, explanations, or additional text.
 
 OUTPUT FORMAT:
 ["table_name1", "table_name2"]
