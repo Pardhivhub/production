@@ -1,0 +1,347 @@
+{
+  "formulas": {
+    "OEE": {
+      "metric": "OEE",
+      "aliases": [
+        "oee",
+        "oee performance",
+        "machine performance",
+        "speed efficiency",
+        "overall equipment effectiveness",
+        "average oee",
+        "overall efficiency",
+        "equipment efficiency"
+      ],
+      "type": "stored_kpi",
+      "table": "oee_details_data",
+      "formula": "AVG(oee)",
+      "query": "SELECT machine_id, loop_id, AVG(oee) AS avg_oee, AVG(availability) AS avg_availability, AVG(performance) AS avg_performance, AVG(quality) AS avg_quality FROM oee_details_data GROUP BY machine_id, loop_id",
+      "time_column": "timestamp",
+      "groupable_by": [
+        "machine_id",
+        "loop_id",
+        "variant",
+        "grammage"
+      ],
+      "filters": [
+        "machine_id",
+        "loop_id",
+        "variant"
+      ]
+    },
+    "EGA_percent": {
+      "metric": "EGA_percent",
+      "aliases": [
+        "ega",
+        "ega percent",
+        "ega %",
+        "ega_percentage",
+        "excess give away percent",
+        "extra give away percent",
+        "excess give away %",
+        "extra weight given away",
+        "excess give away",
+        "giveaway",
+        "extra weight"
+      ],
+      "type": "stored_kpi",
+      "table": "ega_details_data",
+      "formula": "AVG(ega_percent)",
+      "query": "SELECT machine_id, loop_id, AVG(ega_percent) AS avg_ega FROM ega_details_data GROUP BY machine_id, loop_id",
+      "time_column": "start_time",
+      "groupable_by": [
+        "machine_id",
+        "loop_id",
+        "variant",
+        "grammage"
+      ],
+      "filters": [
+        "machine_id",
+        "loop_id",
+        "variant"
+      ]
+    },
+    "Wastage": {
+      "metric": "Wastage",
+      "aliases": [
+        "wastage",
+        "waste",
+        "scrap",
+        "material loss"
+      ],
+      "type": "stored_kpi",
+      "table": "wastage_records",
+      "formula": "SUM(wastage_kg)",
+      "query": "SELECT machine_id, line_id, SUM(wastage_kg) AS total_wastage FROM wastage_records GROUP BY machine_id, line_id",
+      "time_column": "timestamp",
+      "groupable_by": [
+        "machine_id",
+        "line_id",
+        "shift",
+        "grammage"
+      ],
+      "filters": [
+        "machine_id",
+        "line_id",
+        "shift"
+      ]
+    },
+    "Power_Cost": {
+      "metric": "Power_Cost",
+      "aliases": [
+        "electricity cost",
+        "power cost",
+        "energy cost",
+        "utility cost",
+        "cost of power",
+        "kwh",
+        "power consumption"
+      ],
+      "type": "stored_kpi",
+      "table": "electric_meter_hourly",
+      "formula": "SUM(cost)",
+      "query": "SELECT SUM(cost) AS total_cost, SUM(kwh_consumed) AS total_kwh, MAX(peak_demand_kw) AS peak_demand FROM electric_meter_hourly",
+      "time_column": "timestamp",
+      "groupable_by": [
+        "meter_id"
+      ],
+      "filters": [
+        "meter_id"
+      ]
+    },
+    "Sugar_Level": {
+      "metric": "Sugar_Level",
+      "aliases": [
+        "sugar level",
+        "sugar inventory",
+        "silo level",
+        "sugar level kg",
+        "silo stock"
+      ],
+      "type": "stored_kpi",
+      "table": "sugar_silo_levels",
+      "formula": "AVG(level_kg)",
+      "query": "SELECT silo_number, AVG(level_kg) AS avg_level, MIN(level_kg) AS min_level FROM sugar_silo_levels GROUP BY silo_number",
+      "time_column": "timestamp",
+      "groupable_by": [
+        "silo_number"
+      ],
+      "filters": [
+        "silo_number"
+      ]
+    },
+    "Average_Speed": {
+      "metric": "Average_Speed",
+      "aliases": [
+        "average speed",
+        "actual speed",
+        "production speed",
+        "machine speed",
+        "avg speed"
+      ],
+      "type": "derived_kpi",
+      "table": "feedback_data",
+      "formula": "ROUND(AVG(actual_speed), 1)",
+      "query": "SELECT ROUND(AVG(actual_speed), 1) AS avg_speed FROM feedback_data",
+      "groupable_by": [
+        "variant",
+        "topic"
+      ],
+      "rounding": 1
+    },
+    "Total_Weight_kg": {
+      "metric": "Total_Weight_kg",
+      "aliases": [
+        "total production",
+        "total actual weight",
+        "total output",
+        "weight produced",
+        "total yield"
+      ],
+      "type": "derived_kpi",
+      "table": "feedback_data",
+      "formula": "ROUND(SUM(actual_weight) / 1000.0, 2)",
+      "query": "SELECT ROUND(SUM(actual_weight) / 1000.0, 2) AS total_weight_kg FROM feedback_data",
+      "groupable_by": [
+        "variant"
+      ],
+      "rounding": 2
+    },
+    "Factory_Humidity_Avg": {
+      "metric": "Factory_Humidity_Avg",
+      "aliases": [
+        "average humidity",
+        "humidity percent",
+        "humidity %",
+        "air humidity"
+      ],
+      "type": "derived_kpi",
+      "table": "factory_humidity_logs",
+      "formula": "AVG(humidity_pct)",
+      "query": "SELECT AVG(humidity_pct) AS avg_humidity FROM factory_humidity_logs",
+      "groupable_by": [
+        "zone"
+      ],
+      "rounding": 2
+    }
+  },
+  "shifts": {
+    "morning shift": {
+      "start": "06:00:00",
+      "end": "14:00:00",
+      "label": "Morning Shift",
+      "aliases": [
+        "morning",
+        "morning shift",
+        "shift 1",
+        "first shift",
+        "day shift"
+      ]
+    },
+    "afternoon shift": {
+      "start": "14:00:00",
+      "end": "22:00:00",
+      "label": "Afternoon Shift",
+      "aliases": [
+        "afternoon",
+        "afternoon shift",
+        "shift 2",
+        "second shift",
+        "evening shift"
+      ]
+    },
+    "night shift": {
+      "start": "22:00:00",
+      "end": "06:00:00",
+      "label": "Night Shift",
+      "aliases": [
+        "night",
+        "night shift",
+        "shift 3",
+        "third shift",
+        "overnight shift"
+      ]
+    }
+  },
+  "relationships": [
+    {
+      "from_table": "feedback_data",
+      "from_column": "variant",
+      "to_table": "golden_settings",
+      "to_column": "variant",
+      "type": "one-to-many",
+      "description": "Link production feedback to golden setup settings via product variant"
+    },
+    {
+      "from_table": "feeder_metadata",
+      "from_column": "feeder_id",
+      "to_table": "feedback_data",
+      "to_column": "id",
+      "type": "one-to-many",
+      "description": "Link hardware feeder metadata to production feedback logs"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "machine_id",
+      "to_table": "oee_details_data",
+      "to_column": "machine_id",
+      "type": "many-to-many",
+      "description": "Link machine production data (EGA) with OEE metrics via machine_id"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "loop_id",
+      "to_table": "oee_details_data",
+      "to_column": "loop_id",
+      "type": "many-to-many",
+      "description": "Link production loops across EGA and OEE tables"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "grammage",
+      "to_table": "oee_details_data",
+      "to_column": "grammage",
+      "type": "many-to-many",
+      "description": "Link by SKU/grammage"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "variant",
+      "to_table": "oee_details_data",
+      "to_column": "variant",
+      "type": "many-to-many",
+      "description": "Link product variant data between EGA and OEE"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "machine_id",
+      "to_table": "ega_details_data",
+      "to_column": "machine_id",
+      "type": "many-to-many",
+      "description": "Link wastage records to machine production data"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "line_id",
+      "to_table": "ega_details_data",
+      "to_column": "loop_id",
+      "type": "many-to-many",
+      "description": "Link production loop/line for wastage reporting"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "grammage",
+      "to_table": "ega_details_data",
+      "to_column": "grammage",
+      "type": "many-to-many",
+      "description": "Link wastage records to SKU/grammage of production"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "shift",
+      "to_table": "ega_details_data",
+      "to_column": "start_time",
+      "type": "shift-based",
+      "description": "Shift-wise link based on start_time in production tables"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "operator_name",
+      "to_table": "employees_list",
+      "to_column": "name",
+      "type": "many-to-one",
+      "description": "Link operator in wastage record to employee master"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "jta_name",
+      "to_table": "employees_list",
+      "to_column": "name",
+      "type": "many-to-one",
+      "description": "Link JTA in wastage record to employee master"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "shift_incharge_name",
+      "to_table": "employees_list",
+      "to_column": "name",
+      "type": "many-to-one",
+      "description": "Link shift in-charge to employee master"
+    }
+  ],
+  "exclude_column_words": [
+    "id",
+    "uuid",
+    "created_at",
+    "updated_at",
+    "timestamp",
+    "time",
+    "date",
+    "start_time",
+    "end_time",
+    "name",
+    "role",
+    "value",
+    "shift"
+  ]
+}

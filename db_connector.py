@@ -43,8 +43,9 @@ class DatabaseConnector:
             
         # Enforce read-only safety guardrail
         lower_query = sql_query.lower()
-        destructive_keywords = {"drop", "delete", "truncate", "update", "insert", "alter", "create"}
-        if any(keyword in lower_query for keyword in destructive_keywords):
+        import re
+        destructive_keywords = [r"\bdrop\b", r"\bdelete\b", r"\btruncate\b", r"\bupdate\b", r"\binsert\b", r"\balter\b", r"\bcreate\b"]
+        if any(re.search(pattern, lower_query) for pattern in destructive_keywords):
             raise ValueError("Destructive write operations are strictly blocked for security.")
 
         try:

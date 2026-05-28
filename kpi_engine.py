@@ -1,23 +1,77 @@
 import re
+import json
+from pathlib import Path
 from difflib import get_close_matches
 
 # Self-contained manufacturing formulas and aggregation logic
 # Aligned precisely with the public schema of the user's 'iiot_feedback' database!
+TIME_COLUMN_MAP = {
+    "feedback_data": "unix_timestamp",
+    "oee_details_data": "timestamp",
+    "ega_details_data": "start_time",
+    "wastage_records": "timestamp",
+    "electric_meter_hourly": "timestamp",
+    "sugar_silo_levels": "timestamp",
+    "factory_humidity_logs": "timestamp",
+    "live_weight_logs_candy_x": "timestamp",
+    "rf_production_batch_a01": "timestamp",
+}
+
 FORMULAS_CATALOG = {
+  "OEE": {
+    "metric": "OEE",
+    "aliases": ["oee", "oee performance", "machine performance", "speed efficiency", "overall equipment effectiveness", "average oee", "overall efficiency", "equipment efficiency"],
+    "type": "stored_kpi",
+    "table": "oee_details_data",
+    "formula": "AVG(oee)",
+    "query": "SELECT machine_id, loop_id, AVG(oee) AS avg_oee, AVG(availability) AS avg_availability, AVG(performance) AS avg_performance, AVG(quality) AS avg_quality FROM oee_details_data GROUP BY machine_id, loop_id",
+    "time_column": "timestamp",
+    "groupable_by": ["machine_id", "loop_id", "variant", "grammage"],
+    "filters": ["machine_id", "loop_id", "variant"]
+  },
   "EGA_percent": {
     "metric": "EGA_percent",
-    "aliases": ["ega percent", "ega %", "ega_percentage", "ega", "excess give away percent", "extra give away percent", "excess give away %", "extra weight given away"],
-    "type": "derived_kpi",
-    "table": "feedback_data",
-    "aggregates": {
-      "AW": "SUM(actual_weight)",
-      "TW": "SUM(target_weight)"
-    },
-    "formula": "ROUND((((SUM(actual_weight) - SUM(target_weight)) / NULLIF(SUM(actual_weight), 0)) * 100)::numeric, 2)",
-    "query": "SELECT ROUND((((SUM(actual_weight) - SUM(target_weight)) / NULLIF(SUM(actual_weight), 0)) * 100)::numeric, 2) AS ega_percent FROM feedback_data",
-    "groupable_by": ["variant", "topic", "created_at"],
-    "filters": ["variant", "topic"],
-    "rounding": 2
+    "aliases": ["ega", "ega percent", "ega %", "ega_percentage", "excess give away percent", "extra give away percent", "excess give away %", "extra weight given away", "excess give away", "giveaway", "extra weight"],
+    "type": "stored_kpi",
+    "table": "ega_details_data",
+    "formula": "AVG(ega_percent)",
+    "query": "SELECT machine_id, loop_id, AVG(ega_percent) AS avg_ega FROM ega_details_data GROUP BY machine_id, loop_id",
+    "time_column": "start_time",
+    "groupable_by": ["machine_id", "loop_id", "variant", "grammage"],
+    "filters": ["machine_id", "loop_id", "variant"]
+  },
+  "Wastage": {
+    "metric": "Wastage",
+    "aliases": ["wastage", "waste", "scrap", "material loss"],
+    "type": "stored_kpi",
+    "table": "wastage_records",
+    "formula": "SUM(wastage_kg)",
+    "query": "SELECT machine_id, line_id, SUM(wastage_kg) AS total_wastage FROM wastage_records GROUP BY machine_id, line_id",
+    "time_column": "timestamp",
+    "groupable_by": ["machine_id", "line_id", "shift", "grammage"],
+    "filters": ["machine_id", "line_id", "shift"]
+  },
+  "Power_Cost": {
+    "metric": "Power_Cost",
+    "aliases": ["electricity cost", "power cost", "energy cost", "utility cost", "cost of power", "kwh", "power consumption"],
+    "type": "stored_kpi",
+    "table": "electric_meter_hourly",
+    "formula": "SUM(cost)",
+    "query": "SELECT SUM(cost) AS total_cost, SUM(kwh_consumed) AS total_kwh, MAX(peak_demand_kw) AS peak_demand FROM electric_meter_hourly",
+    "time_column": "timestamp",
+    "groupable_by": ["meter_id"],
+    "filters": ["meter_id"]
+  },
+  "Sugar_Level": {
+    "metric": "Sugar_Level",
+    "aliases": ["sugar level", "sugar inventory", "silo level", "sugar level kg", "silo stock"],
+    "type": "stored_kpi",
+    "table": "sugar_silo_levels",
+    "formula": "AVG(level_kg)",
+    "query": "SELECT silo_number, AVG(level_kg) AS avg_level, MIN(level_kg) AS min_level FROM sugar_silo_levels GROUP BY silo_number",
+    "time_column": "timestamp",
+    "groupable_by": ["silo_number"],
+    "filters": ["silo_number"]
   },
   "Average_Speed": {
     "metric": "Average_Speed",
@@ -29,16 +83,6 @@ FORMULAS_CATALOG = {
     "groupable_by": ["variant", "topic"],
     "rounding": 1
   },
-  "OEE_Performance": {
-    "metric": "OEE_Performance",
-    "aliases": ["oee", "oee performance", "machine performance", "speed efficiency", "overall equipment effectiveness", "average oee"],
-    "type": "derived_kpi",
-    "table": "feedback_data",
-    "formula": "ROUND((AVG(actual_speed) / NULLIF(AVG(target_speed), 0) * 100)::numeric, 2)",
-    "query": "SELECT ROUND((AVG(actual_speed) / NULLIF(AVG(target_speed), 0) * 100)::numeric, 2) AS oee_performance FROM feedback_data",
-    "groupable_by": ["variant", "topic"],
-    "rounding": 2
-  },
   "Total_Weight_kg": {
     "metric": "Total_Weight_kg",
     "aliases": ["total production", "total actual weight", "total output", "weight produced", "total yield"],
@@ -47,26 +91,6 @@ FORMULAS_CATALOG = {
     "formula": "ROUND(SUM(actual_weight) / 1000.0, 2)",
     "query": "SELECT ROUND(SUM(actual_weight) / 1000.0, 2) AS total_weight_kg FROM feedback_data",
     "groupable_by": ["variant"],
-    "rounding": 2
-  },
-  "Sugar_Silo_Inventory": {
-    "metric": "Sugar_Silo_Inventory",
-    "aliases": ["sugar level", "sugar inventory", "silo level", "sugar level kg", "silo stock"],
-    "type": "derived_kpi",
-    "table": "sugar_silo_levels",
-    "formula": "SUM(level_kg)",
-    "query": "SELECT SUM(level_kg) AS total_sugar_kg FROM sugar_silo_levels",
-    "groupable_by": ["silo_number"],
-    "rounding": 1
-  },
-  "Power_Consumption_Cost": {
-    "metric": "Power_Consumption_Cost",
-    "aliases": ["electricity cost", "power cost", "energy cost", "utility cost", "cost of power"],
-    "type": "derived_kpi",
-    "table": "electric_meter_hourly",
-    "formula": "SUM(cost)",
-    "query": "SELECT SUM(cost) AS total_cost FROM electric_meter_hourly",
-    "groupable_by": ["meter_id"],
     "rounding": 2
   },
   "Factory_Humidity_Avg": {
@@ -189,16 +213,41 @@ RELATIONSHIPS_CATALOG = [
 ]
 
 SHIFT_PATTERNS = {
-  "morning shift": ("06:00:00", "14:00:00", "Shift 1"),
-  "afternoon shift": ("14:00:00", "22:00:00", "Shift 2"),
-  "night shift": ("22:00:00", "06:00:00", "Shift 3 (Overnight Crossover)")
+  "morning shift": {
+    "start": "06:00:00",
+    "end": "14:00:00",
+    "label": "Morning Shift",
+    "aliases": ["morning", "morning shift", "shift 1", "first shift", "day shift"]
+  },
+  "afternoon shift": {
+    "start": "14:00:00",
+    "end": "22:00:00",
+    "label": "Afternoon Shift",
+    "aliases": ["afternoon", "afternoon shift", "shift 2", "second shift", "evening shift"]
+  },
+  "night shift": {
+    "start": "22:00:00",
+    "end": "06:00:00",
+    "label": "Night Shift",
+    "aliases": ["night", "night shift", "shift 3", "third shift", "overnight shift"]
+  }
 }
 
 class KPIEngine:
     def __init__(self, schema_info: dict = None):
         self.schema_info = schema_info or {"tables": []}
-        self.kpi_formulas = FORMULAS_CATALOG
-        self.relationships = RELATIONSHIPS_CATALOG
+        
+        try:
+            path = Path(__file__).parent / "config" / "kpi_catalog.json"
+            with open(path, encoding="utf-8") as f:
+                catalog = json.load(f)
+            self.kpi_formulas = catalog.get("formulas", FORMULAS_CATALOG)
+            self.relationships = catalog.get("relationships", RELATIONSHIPS_CATALOG)
+            self.shift_patterns = catalog.get("shifts", SHIFT_PATTERNS)
+        except Exception:
+            self.kpi_formulas = FORMULAS_CATALOG
+            self.relationships = RELATIONSHIPS_CATALOG
+            self.shift_patterns = SHIFT_PATTERNS
 
     def compile_domain_hints(self, user_query: str) -> dict:
         q_lower = user_query.lower()
@@ -206,8 +255,8 @@ class KPIEngine:
         corrections = {}
         matched_tables = set()
 
-        # Prioritize feedback_data for generic 'rf' / 'feeder' queries
-        if any(w in q_lower for w in ["rf", "feeder", "amplitude", "worked", "zero"]):
+        # Prioritize feedback_data for generic 'rf' / 'feeder' / 'production' queries
+        if any(w in q_lower for w in ["rf", "feeder", "amplitude", "worked", "zero", "production", "telemetry"]):
             # Specific check for counting unique RFs/feeders (which are columns, not rows)
             if "unique" in q_lower:
                 hints.append(
@@ -241,7 +290,6 @@ class KPIEngine:
         # Handle queries about feeders that have EGA values
         if "feeder" in q_lower and "ega" in q_lower:
             # Optional numeric threshold, e.g., 'ega > 2.5'
-            import re
             thresh_match = re.search(r"ega\s*([<>]=?)\s*([0-9]*\.?[0-9]+)", q_lower)
             if thresh_match:
                 op, val = thresh_match.groups()
@@ -274,16 +322,34 @@ class KPIEngine:
                     matched_tables.add(table.split(".")[-1])
 
         # 2. Shift Range Processing
-        for shift_name, (start_t, end_t, label) in SHIFT_PATTERNS.items():
-            # Match shift aliases like 'shift 1', 'morning shift', 'shift 3', 'night shift'
-            alias_num = label.split()[0].lower() # 'shift 1'
-            if shift_name in q_lower or alias_num in q_lower or label.lower() in q_lower:
+        for shift_name, shift_data in self.shift_patterns.items():
+            start_t = shift_data["start"]
+            end_t = shift_data["end"]
+            label = shift_data["label"]
+            aliases = shift_data.get("aliases", [shift_name])
+            if any(alias in q_lower for alias in aliases):
+                # Pick correct time column based on matched tables
+                time_col = "unix_timestamp"  # default
+                for t in matched_tables:
+                    if t in TIME_COLUMN_MAP:
+                        time_col = TIME_COLUMN_MAP[t]
+                        break
+
+                if label == "Night Shift":
+                    time_filter = (
+                        f"({time_col}::time >= '{start_t}' "
+                        f"OR {time_col}::time < '{end_t}')"
+                    )
+                else:
+                    time_filter = (
+                        f"{time_col}::time >= '{start_t}' "
+                        f"AND {time_col}::time < '{end_t}'"
+                    )
+
                 hints.append(
-                    f"- SHIFT FILTER DETECTED ({label.upper()}): When calculating averages or metrics from 'feedback_data' over a shift, "
-                    f"do NOT join with the 'shift_assignments' table (which is only a scheduling roster). "
-                    f"Instead, filter the telemetry timestamp column (`unix_timestamp::time` in 'feedback_data') directly "
-                    f"using shift hours between '{start_t}' and '{end_t}'.\n"
-                    f"Specifically, for overnight night shifts, you MUST filter using: `(unix_timestamp::time >= '22:00:00' OR unix_timestamp::time < '06:00:00')`."
+                    f"- SHIFT FILTER ({label.upper()}): "
+                    f"Do NOT join shift_assignments. "
+                    f"Filter directly: WHERE {time_filter}"
                 )
 
         # 3. Fuzzy Spelling & Column/Table Correction
@@ -367,6 +433,16 @@ class KPIEngine:
                 "- LISTING RULE: Return ALL matching rows without LIMIT. "
                 "Include relevant columns for context (IDs, names, metrics). "
                 "The explainer will state: 'There are X items with [condition]' and list all of them."
+            )
+
+        if has_filtering:
+            hints.append(
+                "- FILTERING/COMPARISON RULE: The user is asking to filter or find records matching a specific comparison "
+                "(e.g., 'greater than', 'above', 'below', '<', '>', '=', etc.). "
+                "Instead of returning a single aggregated average or sum, you MUST write a SELECT query to list the individual "
+                "records/rows matching the filter condition, including relevant identifying columns (like machine_id, loop_id, variant, start_time/timestamp) "
+                "and the metric column itself. Do NOT aggregate with AVG() or SUM() for the whole table when filtering. "
+                "Example for 'ega greater than 2.5': `SELECT machine_id, loop_id, variant, start_time, ega_percent FROM ega_details_data WHERE ega_percent > 2.5`"
             )
 
         return {

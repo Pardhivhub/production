@@ -5,7 +5,8 @@ from fastapi import FastAPI, HTTPException, Body, Header
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from pathlib import Path
 
 import os
 from db_connector import DatabaseConnector
@@ -14,15 +15,14 @@ from sql_generator import SQLGenerator
 from router import QueryRouter
 from table_selector import TableSelector
 from rag_explorer import RAGExplorer
-from conversation_memory import ConversationMemory
 from query_cache import QueryCache
 from analytics_engine import AnalyticsEngine
 from query_suggester import QuerySuggester
 from semantic_layer import SemanticLayer
 from alert_system import AlertSystem
-from nl_filter_parser import NLFilterParser
 from conversation_manager import ConversationManager
 from constraint_aware_query_generator import ConstraintAwareQueryGenerator
+from nl_filter_parser import NLFilterParser
 from backend.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -34,7 +34,6 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,55 +46,59 @@ app.add_middleware(
 db_connector: Optional[DatabaseConnector] = None
 active_schema: Optional[dict] = None
 rag_explorer: Optional[RAGExplorer] = None
-conversation_memory = ConversationMemory(max_turns=3)
+table_selector: Optional[TableSelector] = None
 query_cache = QueryCache(ttl_minutes=30)
 analytics_engine: Optional[AnalyticsEngine] = None
 alert_system: Optional[AlertSystem] = None
 semantic_layer: Optional[SemanticLayer] = None
-
-# Context-aware conversation tracking
-conversation_manager = ConversationManager(max_history=20)
+conversation_manager = ConversationManager(max_history=20, max_turns=3)
 query_generator: Optional[ConstraintAwareQueryGenerator] = None
+
+
+# -----------------------------------------------------------------------
+# Startup
+# -----------------------------------------------------------------------
 
 @app.on_event("startup")
 async def startup_event():
-    global db_connector, active_schema, rag_explorer, analytics_engine, alert_system, semantic_layer, query_generator
-    logger.info(f"Initializing auto-connection to default database: {settings.DATABASE_URL}")
+    global db_connector, active_schema, rag_explorer, analytics_engine, \
+           alert_system, semantic_layer, query_generator, table_selector
+
+    logger.info(f"Auto-connecting to default database: {settings.DATABASE_URL}")
     try:
         connector = DatabaseConnector(settings.DATABASE_URL)
         await connector.connect()
         raw_schema = await connector.get_schema_metadata()
-        
-        # Enrich schema with semantic layer
+
         semantic_layer = SemanticLayer(connector)
         active_schema = await semantic_layer.enrich_schema(raw_schema)
-        
+
         db_connector = connector
-        
-        # Initialize analytics and alert systems
         analytics_engine = AnalyticsEngine(connector)
         alert_system = AlertSystem(connector)
-        
-        # Initialize constraint-aware query generator
         query_generator = ConstraintAwareQueryGenerator(conversation_manager)
-        
-        logger.info("Auto-connection to default database successful!")
-        
-        # Start background monitoring (optional - uncomment to enable)
-        # asyncio.create_task(alert_system.run_continuous_monitoring(active_schema, interval_seconds=300))
-        
+
+        # Build table selector once globally
+        table_selector = TableSelector(active_schema)
+
+        logger.info("Auto-connection successful!")
     except Exception as e:
-        logger.warning(f"Auto-connection to default database failed: {e}")
+        logger.warning(f"Auto-connection failed: {e}")
 
     try:
         rag_explorer = RAGExplorer()
         knowledge_dir = "./industrial_knowledge"
         if os.path.exists(knowledge_dir):
-            logger.info(f"Indexing local knowledge docs from '{knowledge_dir}'...")
+            logger.info("Indexing RAG knowledge docs...")
             rag_explorer.index_folder(knowledge_dir)
-            logger.info("RAG documents indexed successfully!")
+            logger.info("RAG indexed successfully!")
     except Exception as e:
-        logger.warning(f"RAG initialization/indexing failed: {e}")
+        logger.warning(f"RAG init failed: {e}")
+
+
+# -----------------------------------------------------------------------
+# Models
+# -----------------------------------------------------------------------
 
 class ConnectRequest(BaseModel):
     db_url: str
@@ -104,27 +107,69 @@ class QueryRequest(BaseModel):
     query: str
     session_id: Optional[str] = "default"
 
+
+# -----------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------
+
 def format_sse(event: str, data: dict) -> str:
-    """Helper to structure event stream lines for Server-Sent Events."""
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+async def _do_reindex() -> str:
+    """
+    Re-fetches schema from DB, re-enriches, re-indexes table selector.
+    Called on /connect and on reindex chat command.
+    Returns status message.
+    """
+    global active_schema, table_selector, analytics_engine, alert_system, query_generator
+
+    if not db_connector:
+        return "No database connected. Please connect first."
+
+    try:
+        raw_schema = await db_connector.get_schema_metadata()
+        active_schema = await semantic_layer.enrich_schema(raw_schema)
+
+        if table_selector is None:
+            table_selector = TableSelector(active_schema)
+        else:
+            table_selector.refresh_schema(active_schema)
+
+        analytics_engine = AnalyticsEngine(db_connector)
+        alert_system = AlertSystem(db_connector)
+        query_generator = ConstraintAwareQueryGenerator(conversation_manager)
+
+        table_count = len(active_schema.get("tables", []))
+        table_names = [t["name"] for t in active_schema.get("tables", [])]
+        logger.info(f"Reindex complete. {table_count} tables indexed: {table_names}")
+        return (
+            f"Schema reindexed successfully! "
+            f"**{table_count} tables** are now available:\n"
+            + "\n".join(f"- `{n}`" for n in table_names)
+        )
+    except Exception as e:
+        logger.error(f"Reindex failed: {e}")
+        return f"Reindex failed: {str(e)}"
+
+
+# -----------------------------------------------------------------------
+# Endpoints
+# -----------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
-    """Serves the premium single-page chat dashboard."""
-    try:
-        with open("index.html", "r") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
-    except FileNotFoundError:
+    for path in ["index.html", "production/index.html"]:
         try:
-            with open("production/index.html", "r") as f:
+            with open(path, "r") as f:
                 return HTMLResponse(content=f.read(), status_code=200)
         except FileNotFoundError:
-            raise HTTPException(status_code=404, detail="index.html dashboard template was not found.")
+            continue
+    raise HTTPException(status_code=404, detail="index.html not found.")
+
 
 @app.get("/status")
 async def get_connection_status():
-    """Returns active database connection details and schema if already connected."""
-    global db_connector, active_schema
     if db_connector and active_schema:
         return {
             "status": "connected",
@@ -133,49 +178,53 @@ async def get_connection_status():
         }
     return {"status": "disconnected"}
 
+
 @app.post("/connect")
 async def connect_database(req: ConnectRequest):
-    """Establishes database connection dynamically and extracts schemas."""
-    global db_connector, active_schema, analytics_engine, alert_system, semantic_layer, query_generator
+    global db_connector, active_schema, analytics_engine, alert_system, \
+           semantic_layer, query_generator, table_selector
+
     db_url = req.db_url.strip() if req.db_url else settings.DATABASE_URL
     try:
         connector = DatabaseConnector(db_url)
         await connector.connect()
-        
+
         raw_schema = await connector.get_schema_metadata()
-        
-        # Enrich with semantic layer
         semantic_layer = SemanticLayer(connector)
         schema_info = await semantic_layer.enrich_schema(raw_schema)
-        
+
         db_connector = connector
         active_schema = schema_info
-        
-        # Initialize analytics and alerts
         analytics_engine = AnalyticsEngine(connector)
         alert_system = AlertSystem(connector)
-        
-        # Initialize constraint-aware query generator
         query_generator = ConstraintAwareQueryGenerator(conversation_manager)
-        
+
+        # Always reindex on connect — picks up any new tables automatically
+        if table_selector is None:
+            table_selector = TableSelector(active_schema)
+        else:
+            table_selector.refresh_schema(active_schema)
+
+        logger.info(f"Connected and reindexed: {len(active_schema.get('tables', []))} tables")
+
         return {
             "status": "success",
-            "message": "Successfully connected to database and loaded schema metadata.",
+            "message": "Connected and schema reindexed.",
             "schema_info": schema_info
         }
     except Exception as e:
-        logger.error(f"Connect endpoint error: {e}")
+        logger.error(f"Connect error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/chat")
 async def stream_chat(req: QueryRequest):
-    """Streams spelling corrections, queries, tables, and answers via SSE."""
-    global db_connector, active_schema
-    
+    global db_connector, active_schema, table_selector
+
     if not db_connector or not active_schema:
         router = QueryRouter({"tables": []})
         classification = router.classify_intent(req.query)
-        
+
         async def fallback_stream():
             if classification["type"] == "greeting":
                 yield format_sse("answer", {"answer": classification["response"]})
@@ -183,99 +232,165 @@ async def stream_chat(req: QueryRequest):
                 yield format_sse("error", {
                     "stage": "connection",
                     "error_type": "Database Not Connected",
-                    "message": "Please connect to a database using the connection panel at the top first.",
-                    "suggestion": "Enter a valid SQLite path (e.g. 'itciot.db') or a PostgreSQL connection string to activate full analysis."
+                    "message": "Please connect to a database first.",
+                    "suggestion": "Enter a valid SQLite path or PostgreSQL connection string."
                 })
         return StreamingResponse(fallback_stream(), media_type="text/event-stream")
 
     async def chat_event_generator():
-        # Add user message to conversation manager
         conversation_manager.add_user_message(req.query)
-        
+
         router = QueryRouter(active_schema)
         kpi_engine = KPIEngine(active_schema)
-        table_selector = TableSelector(active_schema)
         generator = SQLGenerator(db_connector)
         suggester = QuerySuggester(active_schema)
-        nl_parser = NLFilterParser()
-        
+
         intent = router.classify_intent(req.query)
+
+        # --- REINDEX COMMAND ---
+        if intent["type"] == "reindex":
+            status_msg = await _do_reindex()
+            yield format_sse("answer", {"answer": status_msg})
+            return
+
+        # --- CLARIFICATION REQUEST ---
+        if intent["type"] == "clarification":
+            history = conversation_manager.get_conversation_context(last_n=1)
+            if history:
+                intent["type"] = "data_query"
+            else:
+                yield format_sse("clarification", {
+                    "question": intent["question"],
+                    "suggestions": intent["suggestions"],
+                    "original_query": intent.get("original_query", req.query)
+                })
+                return
+
+        # --- GREETING / INVALID DOMAIN ---
         if intent["type"] in ["greeting", "invalid_domain"]:
             yield format_sse("answer", {"answer": intent["response"]})
             return
 
+        # --- CONCEPTUAL / RAG ---
         if intent["type"] == "conceptual":
-            yield format_sse("pipeline", {"stage": "table_selection", "status": "completed"})
             yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
             yield format_sse("pipeline", {
                 "stage": "execution",
                 "status": "completed",
-                "sql": "-- RAG Conceptual Query (No database execution required)",
-                "results": {"columns": ["Source Document", "Definition Snippet"], "rows": [], "row_count": 0}
+                "sql": "-- RAG Conceptual Query",
+                "results": {"columns": [], "rows": [], "row_count": 0}
             })
-            
             rag_context = ""
-            if rag_explorer:
+            if rag_explorer and not settings.DISABLE_RAG:
                 try:
                     rag_hits = rag_explorer.retrieve(req.query, top_k=2)
                     if rag_hits:
-                        rag_context = "\n".join([f"[Source: {hit[0]}]\n{hit[1]}" for hit in rag_hits])
-                        logger.info("Semantic context successfully retrieved from knowledge documents.")
+                        rag_context = "\n".join([f"[Source: {h[0]}]\n{h[1]}" for h in rag_hits])
                 except Exception as e:
                     logger.warning(f"RAG retrieval failed: {e}")
-            
+
             explanation = await generator.explain_rag_concept(req.query, rag_context)
             suggestions = suggester.suggest_followups(req.query, "", {"row_count": 0, "rows": []}, [])
-            
-            yield format_sse("answer", {
-                "answer": explanation,
-                "suggestions": suggestions
-            })
+            yield format_sse("answer", {"answer": explanation, "suggestions": suggestions})
             return
 
+        # --- MAIN SQL PIPELINE ---
         kpi_data = kpi_engine.compile_domain_hints(req.query)
-        
+
         if kpi_data.get("corrections"):
             yield format_sse("spelling_correction", {"corrections": kpi_data["corrections"]})
             await asyncio.sleep(0.1)
 
         sql = ""
         selected_tables = []
+
         try:
-            conv_context = conversation_memory.get_context(req.session_id)
-            
-            selected_tables_dict = table_selector.select_relevant_tables(req.query)
+            conv_context = conversation_manager.get_context(req.session_id)
+            full_context = conversation_manager.get_conversation_context(last_n=3)
+
+            # Use global table_selector — pass kpi matched_tables for scoring boost
+            kpi_matched = kpi_data.get("matched_tables", [])
+            selected_tables_dict = table_selector.select_relevant_tables(
+                req.query,
+                top_k=settings.MAX_TABLES_DEFAULT,
+                kpi_matched_tables=kpi_matched
+            )
             selected_tables = [t["name"] for t in selected_tables_dict["tables"]]
+            scores = selected_tables_dict.get("scores", {})
             reduced_schema = {"tables": selected_tables_dict["tables"]}
-            
+
+            # Yield table selection stage completed with table scores for frontend rendering
+            yield format_sse("pipeline", {
+                "stage": "table_selection",
+                "status": "completed",
+                "tables": selected_tables,
+                "scores": scores
+            })
+            await asyncio.sleep(0.05)
+
             enhanced_hints = kpi_data["hints"]
+            
+            # Dynamically inject relationship join hints based on selected_tables!
+            if len(selected_tables) > 1:
+                join_hints = []
+                for rel in kpi_engine.relationships:
+                    from_t = rel["from_table"].split(".")[-1]
+                    to_t = rel["to_table"].split(".")[-1]
+                    if from_t in selected_tables and to_t in selected_tables:
+                        join_hints.append(
+                            f"- JOIN RELATIONSHIP DETECTED: To join '{from_t}' and '{to_t}', "
+                            f"use: `JOIN {to_t} ON {from_t}.{rel['from_column']} = {to_t}.{rel['to_column']}` "
+                            f"({rel['description']})."
+                        )
+                if join_hints:
+                    enhanced_hints = f"{enhanced_hints}\n\n" + "\n".join(join_hints)
+
             if conv_context:
                 enhanced_hints = f"{conv_context}\n\n{enhanced_hints}"
-            
-            # Add conversation context from conversation_manager
-            full_context = conversation_manager.get_conversation_context(last_n=3)
             if full_context:
                 enhanced_hints = f"{full_context}\n\n{enhanced_hints}"
-            
-            # Generate SQL with LLM
-            llm_generated_sql = await generator.generate_sql(req.query, reduced_schema, enhanced_hints)
-            
-            # Validate and modify SQL based on user constraints
-            if query_generator:
-                sql = query_generator.generate_query(req.query, active_schema, llm_generated_sql)
-                if sql != llm_generated_sql:
-                    logger.info(f"Query modified by constraint validator:\nOriginal: {llm_generated_sql}\nModified: {sql}")
-            else:
-                sql = llm_generated_sql
-            
+
+            # Resolve the time column name for the primary selected table
+            resolved_time_col = "unix_timestamp"
+            if selected_tables:
+                primary_tbl = selected_tables[0]
+                from kpi_engine import TIME_COLUMN_MAP
+                resolved_time_col = TIME_COLUMN_MAP.get(primary_tbl, "timestamp")
+
+            # Parse temporal filters using NLFilterParser
+            nl_parser = NLFilterParser()
+            time_filter = nl_parser.parse_temporal_filter(req.query, time_column=resolved_time_col)
+            if time_filter:
+                enhanced_hints += f"\n\nPARSED TIME FILTER: {time_filter}\nUse this exact WHERE clause fragment for time filtering."
+
+            # Pass matched_tables to sql_generator for confirmed table hint
+            llm_generated_sql = await generator.generate_sql(
+                req.query,
+                reduced_schema,
+                enhanced_hints,
+                matched_tables=selected_tables
+            )
+
+            sql = query_generator.generate_query(
+                req.query, active_schema, llm_generated_sql
+            ) if query_generator else llm_generated_sql
+
+            if sql != llm_generated_sql:
+                logger.info(f"Constraint validator modified SQL:\nOriginal: {llm_generated_sql}\nModified: {sql}")
+
             yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
+
         except Exception as e:
-            yield format_sse("error", {
-                "stage": "sql_generation",
-                "error_type": "SQL Compiler Failure",
-                "message": f"Could not formulate SQL statement: {str(e)}",
-                "suggestion": "Try clarifying the metric name (e.g. specify 'overall efficiency' or 'excess give away %')."
-            })
+            try:
+                explanation = await generator.explain_error_conversational(req.query, str(e), "sql_generation")
+                yield format_sse("answer", {"answer": explanation})
+            except Exception:
+                yield format_sse("error", {
+                    "stage": "sql_generation",
+                    "error_type": "SQL Compiler Failure",
+                    "message": f"Could not formulate SQL: {str(e)}",
+                    "suggestion": "Try clarifying the metric name."
+                })
             return
 
         results = None
@@ -283,11 +398,11 @@ async def stream_chat(req: QueryRequest):
             cached_result = query_cache.get(sql)
             if cached_result:
                 results = cached_result
-                logger.info("Using cached query result")
+                logger.info("Cache hit")
             else:
                 results = await db_connector.execute_query(sql)
                 query_cache.set(sql, results)
-            
+
             yield format_sse("pipeline", {
                 "stage": "execution",
                 "status": "completed",
@@ -295,143 +410,369 @@ async def stream_chat(req: QueryRequest):
                 "results": results
             })
         except Exception as e:
-            yield format_sse("error", {
-                "stage": "execution",
-                "error_type": "Database Execution Error",
-                "message": f"SQL execution failed: {str(e)}",
-                "suggestion": "Double check if tables are correctly populated or schema columns are spelled correctly."
-            })
+            try:
+                explanation = await generator.explain_error_conversational(req.query, str(e), "execution")
+                yield format_sse("answer", {"answer": explanation})
+            except Exception:
+                yield format_sse("error", {
+                    "stage": "execution",
+                    "error_type": "Database Execution Error",
+                    "message": f"SQL execution failed: {str(e)}",
+                    "suggestion": "Check if tables are populated and column names are correct."
+                })
             return
 
         extra_context = ""
-        if rag_explorer:
+        if rag_explorer and not settings.DISABLE_RAG:
             try:
                 rag_hits = rag_explorer.retrieve(req.query, top_k=2)
                 if rag_hits:
-                    extra_context = "\n".join([f"[Source: {hit[0]}]\n{hit[1]}" for hit in rag_hits])
-                    logger.info("Semantic context successfully retrieved from knowledge documents.")
+                    extra_context = "\n".join([f"[Source: {h[0]}]\n{h[1]}" for h in rag_hits])
             except Exception as e:
-                logger.warning(f"Failed to retrieve semantic RAG context: {e}")
-        
+                logger.warning(f"RAG retrieval failed: {e}")
+
         auto_insights = ""
         if analytics_engine and selected_tables:
             try:
                 metric_col = None
                 for table_name in selected_tables:
-                    table = next((t for t in active_schema.get("tables", []) if t["name"] == table_name), None)
+                    table = next(
+                        (t for t in active_schema.get("tables", []) if t["name"] == table_name), None
+                    )
                     if table:
                         for col in table.get("columns", []):
-                            col_name = col.get("name", "").lower()
-                            if any(m in col_name for m in ["weight", "speed", "cost", "level", "percent"]):
+                            if any(m in col.get("name", "").lower()
+                                   for m in ["weight", "speed", "cost", "level", "percent"]):
                                 metric_col = col.get("name")
                                 break
                     if metric_col:
                         break
-                
                 if metric_col:
-                    auto_insights = await analytics_engine.auto_insights(req.query, selected_tables[0], metric_col)
+                    auto_insights = await analytics_engine.auto_insights(
+                        req.query, selected_tables[0], metric_col
+                    )
             except Exception as e:
-                logger.warning(f"Auto insights generation failed: {e}")
+                logger.warning(f"Auto insights failed: {e}")
 
         try:
-            explanation = await generator.explain_results(req.query, sql, results, extra_context=extra_context)
-            
-            # If results are empty/zero, automatically suggest alternative tables
-            row_count = results.get('row_count', 0)
-            is_zero_result = row_count == 0 or (row_count == 1 and results.get('rows') and list(results['rows'][0].values())[0] == 0)
-            
-            if is_zero_result and selected_tables:
-                # Find alternative tables that might have the data
-                all_tables = [t['name'] for t in active_schema.get('tables', [])]
-                alternative_tables = [t for t in all_tables if t not in selected_tables and 'feeder' in t.lower()]
-                
-                if alternative_tables:
-                    explanation += f"\n\n💡 **Suggestion**: The '{selected_tables[0]}' table returned no results. You might want to check these alternative tables: {', '.join(alternative_tables[:3])}"
-            
+            explanation = await generator.explain_results(
+                req.query, sql, results, extra_context=extra_context
+            )
+
+            # Zero result suggestion
+            row_count = results.get("row_count", 0)
+            is_zero = row_count == 0 or (
+                row_count == 1
+                and results.get("rows")
+                and list(results["rows"][0].values())[0] == 0
+            )
+            if is_zero and selected_tables:
+                all_tables = [t["name"] for t in active_schema.get("tables", [])]
+                alternatives = [t for t in all_tables if t not in selected_tables][:3]
+                if alternatives:
+                    explanation += (
+                        f"\n\n💡 **Suggestion**: No results found in `{selected_tables[0]}`. "
+                        f"You might want to check: {', '.join(f'`{t}`' for t in alternatives)}"
+                    )
+
             if auto_insights:
                 explanation += auto_insights
-            
-            result_summary = f"{results.get('row_count', 0)} rows returned"
-            if results.get('rows') and len(results['rows']) > 0:
-                result_summary = f"{results['rows'][0]}"
-            conversation_memory.add_turn(req.session_id, req.query, sql, result_summary)
-            
-            # Add assistant response to conversation manager
-            conversation_manager.add_assistant_message(
-                explanation,
-                sql_query=sql,
-                query_result=results
+
+            result_summary = (
+                str(results["rows"][0])
+                if results.get("rows")
+                else f"{row_count} rows"
             )
-            
+            conversation_manager.add_turn(req.session_id, req.query, sql, result_summary)
+            conversation_manager.add_assistant_message(
+                explanation, sql_query=sql, query_result=results
+            )
+
             suggestions = suggester.suggest_followups(req.query, sql, results, selected_tables)
-            
+
             yield format_sse("answer", {
                 "answer": explanation,
                 "sql": sql,
                 "results": results,
                 "suggestions": suggestions
             })
+
         except Exception as e:
             yield format_sse("error", {
                 "stage": "explanation",
                 "error_type": "Explainer Generation Error",
-                "message": f"Failed to generate answer explanation: {str(e)}",
-                "suggestion": "Your SQL was successful but the AI model is temporarily busy. Check the raw query results above."
+                "message": f"Explanation failed: {str(e)}",
+                "suggestion": "SQL ran successfully. Check raw results above."
             })
 
     return StreamingResponse(chat_event_generator(), media_type="text/event-stream")
 
+
+# -----------------------------------------------------------------------
+# Other Endpoints
+# -----------------------------------------------------------------------
+
 @app.get("/alerts")
 async def get_alerts():
-    """Get current system alerts."""
     if not alert_system or not active_schema:
         return {"alerts": [], "message": "Alert system not initialized"}
-    
     all_alerts = []
     for table in active_schema.get("tables", []):
-        table_name = table.get("name")
-        alerts = await alert_system.check_alerts(table_name, time_window_minutes=60)
+        alerts = await alert_system.check_alerts(table.get("name"), time_window_minutes=60)
         all_alerts.extend(alerts)
-    
     return {"alerts": all_alerts, "count": len(all_alerts)}
+
 
 @app.get("/insights/{table_name}/{metric_column}")
 async def get_insights(table_name: str, metric_column: str):
-    """Get analytics insights for a specific table and metric."""
     if not analytics_engine:
         raise HTTPException(status_code=503, detail="Analytics engine not initialized")
-    
-    anomalies = await analytics_engine.detect_anomalies(table_name, metric_column)
-    trends = await analytics_engine.detect_trends(table_name, metric_column)
-    time_patterns = await analytics_engine.analyze_time_patterns(table_name, metric_column)
-    
     return {
         "table": table_name,
         "metric": metric_column,
-        "anomalies": anomalies,
-        "trends": trends,
-        "time_patterns": time_patterns
+        "anomalies": await analytics_engine.detect_anomalies(table_name, metric_column),
+        "trends": await analytics_engine.detect_trends(table_name, metric_column),
+        "time_patterns": await analytics_engine.analyze_time_patterns(table_name, metric_column)
     }
+
 
 @app.get("/conversation/status")
 async def get_conversation_status():
-    """Get current conversation state and active constraints."""
     return conversation_manager.get_summary()
 
+
 @app.post("/conversation/clear")
-async def clear_conversation_constraints():
-    """Clear all active user constraints."""
+async def clear_conversation():
     conversation_manager.clear_all_constraints()
-    return {"status": "success", "message": "All conversation constraints cleared"}
+    return {"status": "success", "message": "Conversation constraints cleared"}
+
 
 @app.get("/conversation/history")
 async def get_conversation_history():
-    """Get recent conversation history."""
-    context = conversation_manager.get_conversation_context(last_n=10)
     return {
-        "context": context,
+        "context": conversation_manager.get_conversation_context(last_n=10),
         "active_constraints": conversation_manager.get_active_constraints()
     }
+
+
+# ── Rules Manager ────────────────────────────────────────
+
+KPI_CATALOG_PATH = Path(__file__).parent / "config" / "kpi_catalog.json"
+
+def load_catalog():
+    with open(KPI_CATALOG_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+def save_catalog(catalog: dict):
+    with open(KPI_CATALOG_PATH, "w", encoding="utf-8") as f:
+        json.dump(catalog, f, indent=2)
+
+class KPIFormula(BaseModel):
+    metric: str
+    aliases: List[str]
+    table: str
+    formula: str
+    query: str
+    time_column: Optional[str] = "timestamp"
+    groupable_by: Optional[List[str]] = []
+    filters: Optional[List[str]] = []
+
+class ShiftPattern(BaseModel):
+    name: str
+    start: str
+    end: str
+    label: str
+    aliases: List[str]
+
+class RelationshipRule(BaseModel):
+    from_table: str
+    from_column: str
+    to_table: str
+    to_column: str
+    description: str
+
+class ExcludeWord(BaseModel):
+    word: str
+
+@app.get("/rules")
+async def get_all_rules():
+    catalog = load_catalog()
+    return {
+        "formulas": catalog.get("formulas", {}),
+        "shifts": catalog.get("shifts", {}),
+        "relationships": catalog.get("relationships", []),
+        "domain_hints": catalog.get("domain_hints", {}),
+        "exclude_column_words": catalog.get("exclude_column_words", [])
+    }
+
+class PromptData(BaseModel):
+    content: str
+
+@app.get("/rules/prompt")
+async def get_system_prompt():
+    prompt_path = Path(__file__).parent / "prompts" / "sql_system.txt"
+    try:
+        content = prompt_path.read_text(encoding="utf-8")
+        return {"content": content}
+    except Exception as e:
+        return {"content": f"Error loading prompt: {e}"}
+
+@app.post("/rules/prompt")
+async def update_system_prompt(data: PromptData):
+    prompt_path = Path(__file__).parent / "prompts" / "sql_system.txt"
+    try:
+        prompt_path.write_text(data.content, encoding="utf-8")
+        from sql_generator import reload_prompts
+        reload_prompts()
+        return {"status": "success", "message": "Prompt updated and AI reloaded."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/rules/formula")
+async def add_formula(formula: KPIFormula):
+    catalog = load_catalog()
+    catalog.setdefault("formulas", {})[formula.metric] = {
+        "metric": formula.metric,
+        "aliases": formula.aliases,
+        "type": "stored_kpi",
+        "table": formula.table,
+        "formula": formula.formula,
+        "query": formula.query,
+        "time_column": formula.time_column,
+        "groupable_by": formula.groupable_by,
+        "filters": formula.filters
+    }
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": f"Formula {formula.metric} added"}
+
+@app.put("/rules/formula/{metric_name}")
+async def update_formula(metric_name: str, formula: KPIFormula):
+    catalog = load_catalog()
+    if metric_name not in catalog.get("formulas", {}):
+        raise HTTPException(status_code=404, detail="Formula not found")
+    catalog["formulas"][metric_name] = {
+        "metric": formula.metric,
+        "aliases": formula.aliases,
+        "type": "stored_kpi",
+        "table": formula.table,
+        "formula": formula.formula,
+        "query": formula.query,
+        "time_column": formula.time_column,
+        "groupable_by": formula.groupable_by,
+        "filters": formula.filters
+    }
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": f"Formula {metric_name} updated"}
+
+@app.delete("/rules/formula/{metric_name}")
+async def delete_formula(metric_name: str):
+    catalog = load_catalog()
+    if metric_name not in catalog.get("formulas", {}):
+        raise HTTPException(status_code=404, detail="Formula not found")
+    del catalog["formulas"][metric_name]
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": f"Formula {metric_name} deleted"}
+
+@app.post("/rules/shift")
+async def add_shift(shift: ShiftPattern):
+    catalog = load_catalog()
+    catalog.setdefault("shifts", {})[shift.name] = {
+        "start": shift.start,
+        "end": shift.end,
+        "label": shift.label,
+        "aliases": shift.aliases
+    }
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": f"Shift {shift.name} added"}
+
+@app.delete("/rules/shift/{shift_name}")
+async def delete_shift(shift_name: str):
+    catalog = load_catalog()
+    if shift_name not in catalog.get("shifts", {}):
+        raise HTTPException(status_code=404, detail="Shift not found")
+    del catalog["shifts"][shift_name]
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": f"Shift {shift_name} deleted"}
+
+@app.post("/rules/relationship")
+async def add_relationship(rel: RelationshipRule):
+    catalog = load_catalog()
+    catalog.setdefault("relationships", []).append({
+        "from_table": rel.from_table,
+        "from_column": rel.from_column,
+        "to_table": rel.to_table,
+        "to_column": rel.to_column,
+        "description": rel.description
+    })
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": "Relationship added"}
+
+@app.delete("/rules/relationship")
+async def delete_relationship(from_table: str, from_column: str, to_table: str, to_column: str):
+    catalog = load_catalog()
+    rels = catalog.get("relationships", [])
+    new_rels = [
+        r for r in rels
+        if not (
+            r.get("from_table") == from_table and
+            r.get("from_column") == from_column and
+            r.get("to_table") == to_table and
+            r.get("to_column") == to_column
+        )
+    ]
+    if len(new_rels) == len(rels):
+        raise HTTPException(status_code=404, detail="Relationship not found")
+    catalog["relationships"] = new_rels
+    save_catalog(catalog)
+    global active_schema
+    if active_schema:
+        await _do_reindex()
+    return {"status": "success", "message": "Relationship deleted"}
+
+@app.post("/rules/exclude-word")
+async def add_exclude_word(item: ExcludeWord):
+    catalog = load_catalog()
+    words = catalog.get("exclude_column_words", [])
+    if item.word not in words:
+        words.append(item.word)
+        catalog["exclude_column_words"] = words
+        save_catalog(catalog)
+        global active_schema
+        if active_schema:
+            await _do_reindex()
+    return {"status": "success", "message": f"Word '{item.word}' excluded"}
+
+@app.delete("/rules/exclude-word/{word}")
+async def remove_exclude_word(word: str):
+    catalog = load_catalog()
+    words = catalog.get("exclude_column_words", [])
+    if word in words:
+        words.remove(word)
+        catalog["exclude_column_words"] = words
+        save_catalog(catalog)
+        global active_schema
+        if active_schema:
+            await _do_reindex()
+    return {"status": "success", "message": f"Word '{word}' removed from exclude list"}
+
 
 if __name__ == "__main__":
     import uvicorn

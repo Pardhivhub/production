@@ -9,7 +9,7 @@ from sql_generator import SQLGenerator
 from router import QueryRouter
 from table_selector import TableSelector
 from rag_explorer import RAGExplorer
-from conversation_memory import ConversationMemory
+from conversation_manager import ConversationManager
 from query_cache import QueryCache
 
 logging.basicConfig(level=logging.INFO)
@@ -39,8 +39,8 @@ async def main():
     generator = SQLGenerator(connector)
     rag = RAGExplorer()
     
-    # Initialize conversation memory and cache for terminal session
-    conversation_memory = ConversationMemory(max_turns=3)
+    # Initialize conversation manager and cache for terminal session
+    conversation_memory = ConversationManager(max_turns=3)
     query_cache = QueryCache(ttl_minutes=30)
 
     # Index custom knowledge folder if present

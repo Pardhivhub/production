@@ -905,6 +905,31 @@
                                 if (currentEvent === "spelling_correction") {
                                     renderSpellingCorrections(contentEl, data.corrections);
                                 } 
+                                else if (currentEvent === "pipeline" && data.stage === "table_selection") {
+                                    renderTableSelection(contentEl, data.tables, data.scores);
+                                }
+                                // Check if clarification is needed
+                                else if (currentEvent === "clarification") {
+                                    bubbleEl.innerHTML = data.question;
+                                    if (data.suggestions && data.suggestions.length > 0) {
+                                        const suggs = document.createElement("div");
+                                        suggs.style.marginTop = "10px";
+                                        data.suggestions.forEach(s => {
+                                            const btn = document.createElement("button");
+                                            btn.innerText = s;
+                                            btn.style.margin = "4px";
+                                            btn.style.padding = "6px 12px";
+                                            btn.style.borderRadius = "20px";
+                                            btn.style.border = "1px solid var(--primary)";
+                                            btn.style.background = "rgba(0, 240, 255, 0.1)";
+                                            btn.style.color = "var(--primary)";
+                                            btn.style.cursor = "pointer";
+                                            btn.onclick = () => { document.getElementById("query-input").value = s; };
+                                            suggs.appendChild(btn);
+                                        });
+                                        contentEl.appendChild(suggs);
+                                    }
+                                }
                                 // Check if standard data chunk
                                 else if (data.answer) {
                                     bubbleEl.innerText = data.answer;
@@ -1097,6 +1122,405 @@
             container.appendChild(badge);
             messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
         }
+
+        function renderTableSelection(container, tables, scores) {
+            if (container.querySelector(".table-selection-block")) return;
+            if (!tables || tables.length === 0) return;
+
+            const block = document.createElement("div");
+            block.className = "table-selection-block";
+            block.style.background = "rgba(255, 255, 255, 0.02)";
+            block.style.border = "1px solid rgba(255, 255, 255, 0.05)";
+            block.style.borderRadius = "10px";
+            block.style.padding = "10px 14px";
+            block.style.marginTop = "4px";
+            block.style.display = "flex";
+            block.style.flexDirection = "column";
+            block.style.gap = "8px";
+            block.style.animation = "slideIn 0.3s ease-out forwards";
+
+            const header = document.createElement("div");
+            header.style.display = "flex";
+            header.style.alignItems = "center";
+            header.style.gap = "6px";
+            header.style.fontSize = "9px";
+            header.style.color = "var(--text-muted)";
+            header.style.textTransform = "uppercase";
+            header.style.fontWeight = "600";
+            header.style.letterSpacing = "1px";
+            header.innerHTML = `
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--primary);"><path d="M4 19h16M4 15h16M4 11h16M4 7h16"/></svg>
+                Schema-Driven Table Selection
+            `;
+            block.appendChild(header);
+
+            const list = document.createElement("div");
+            list.style.display = "flex";
+            list.style.flexWrap = "wrap";
+            list.style.gap = "6px";
+
+            tables.forEach(table => {
+                const score = scores[table] !== undefined ? scores[table] : 0;
+                let scoreColor = "#00f0ff";
+                if (score >= 9) scoreColor = "#39ff14";
+                else if (score >= 6) scoreColor = "#00f0ff";
+                else if (score >= 3) scoreColor = "#ffb703";
+                else scoreColor = "var(--text-muted)";
+
+                const chip = document.createElement("div");
+                chip.style.background = "rgba(0, 0, 0, 0.4)";
+                chip.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+                chip.style.borderRadius = "6px";
+                chip.style.padding = "4px 8px";
+                chip.style.fontSize = "11.5px";
+                chip.style.fontFamily = "'JetBrains Mono', monospace";
+                chip.style.display = "flex";
+                chip.style.alignItems = "center";
+                chip.style.gap = "8px";
+                chip.style.color = "rgba(255, 255, 255, 0.8)";
+                chip.innerHTML = `
+                    <span>${table}</span>
+                    <span style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 4px; font-size: 9.5px; font-weight: 600; color: ${scoreColor}; border: 1px solid ${scoreColor}33;">
+                        Score: ${score}
+                    </span>
+                `;
+                list.appendChild(chip);
+            });
+
+            block.appendChild(list);
+            container.appendChild(block);
+            messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
+        }
     </script>
+
+    <!-- Rules Manager Button -->
+    <button onclick="document.getElementById('rules-panel').style.display='flex'; loadRules();" 
+            style="position:fixed;bottom:20px;right:20px;padding:12px 20px;
+                   border-radius:12px;background:var(--bg-card);color:var(--text-main);
+                   border:1px solid rgba(255,255,255,0.1);cursor:pointer;
+                   box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000;
+                   display:flex;align-items:center;gap:8px;font-weight:600;
+                   backdrop-filter: blur(10px); transition: all 0.2s ease;">
+        <span style="font-size:18px">⚙️</span> Rules Manager
+    </button>
+
+    <!-- Rules Manager Panel -->
+    <div id="rules-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:2000;justify-content:center;align-items:center;">
+        <div style="background:var(--bg-base); border: 1px solid var(--border-color); border-radius:16px; width:80%; max-width:900px; max-height:85vh; display:flex; flex-direction:column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+            
+            <!-- Header -->
+            <div style="padding:20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="font-size:1.2rem; display:flex; align-items:center; gap:10px;">
+                    <span style="color:var(--primary)">⚙️</span> Rules Manager
+                </h2>
+                <button onclick="document.getElementById('rules-panel').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.5rem; line-height:1;">&times;</button>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex; border-bottom: 1px solid var(--border-color); padding: 0 24px; gap: 20px; overflow-x: auto;">
+                <button class="rule-tab active" onclick="switchTab('formulas')" style="background:none; border:none; padding:15px 0; color:var(--primary); border-bottom: 2px solid var(--primary); font-weight:600; cursor:pointer;">KPI Formulas</button>
+                <button class="rule-tab" onclick="switchTab('shifts')" style="background:none; border:none; padding:15px 0; color:var(--text-muted); cursor:pointer;">Shifts</button>
+                <button class="rule-tab" onclick="switchTab('relationships')" style="background:none; border:none; padding:15px 0; color:var(--text-muted); cursor:pointer;">Relationships</button>
+                <button class="rule-tab" onclick="switchTab('excludes')" style="background:none; border:none; padding:15px 0; color:var(--text-muted); cursor:pointer;">Exclude Words</button>
+                <button class="rule-tab" onclick="switchTab('prompt')" style="background:none; border:none; padding:15px 0; color:var(--text-muted); cursor:pointer;">AI Rules (Prompt)</button>
+            </div>
+
+            <style>
+                .rule-input { flex:1; padding:10px 14px; background:var(--bg-card); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:white; outline:none; font-family:'Inter', sans-serif;}
+                .rule-btn { padding:10px 20px; background:var(--primary); color:black; border:none; border-radius:8px; cursor:pointer; font-weight:600; white-space:nowrap;}
+                .rule-btn-danger { padding:8px 14px; background:rgba(255,59,48,0.2); color:#ff3b30; border:1px solid rgba(255,59,48,0.4); border-radius:8px; cursor:pointer; font-weight:600;}
+                .form-row { display:flex; gap:10px; margin-bottom:10px; align-items:center; }
+            </style>
+
+            <!-- Content Area -->
+            <div style="padding:24px; overflow-y:auto; flex: 1;">
+                
+                <!-- Formulas Tab -->
+                <div id="tab-formulas" class="rule-content">
+                    <h3 style="margin-bottom: 15px; font-size:1rem; color:var(--text-muted);">Current KPI Formulas</h3>
+                    <div id="formulas-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom: 25px;"></div>
+                    
+                    <h4 style="margin-bottom: 10px; color:var(--text-main);">Add New Formula</h4>
+                    <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
+                        <div class="form-row">
+                            <input type="text" id="f-metric" class="rule-input" placeholder="Metric Name (e.g. OEE)">
+                            <input type="text" id="f-table" class="rule-input" placeholder="Target Table">
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="f-formula" class="rule-input" placeholder="SQL Formula (e.g. AVG(oee))">
+                            <input type="text" id="f-aliases" class="rule-input" placeholder="Aliases (comma separated)">
+                        </div>
+                        <div class="form-row">
+                            <textarea id="f-query" class="rule-input" placeholder="Example Base SQL Query" style="min-height:60px;resize:vertical;"></textarea>
+                        </div>
+                        <div style="text-align:right;">
+                            <button class="rule-btn" onclick="addFormula()">Save Formula</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shifts Tab -->
+                <div id="tab-shifts" class="rule-content" style="display:none;">
+                    <h3 style="margin-bottom: 15px; font-size:1rem; color:var(--text-muted);">Shift Patterns</h3>
+                    <div id="shifts-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:25px;"></div>
+                    
+                    <h4 style="margin-bottom: 10px; color:var(--text-main);">Add New Shift</h4>
+                    <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
+                        <div class="form-row">
+                            <input type="text" id="s-name" class="rule-input" placeholder="Internal ID (e.g. morning shift)">
+                            <input type="text" id="s-label" class="rule-input" placeholder="Display Label">
+                        </div>
+                        <div class="form-row">
+                            <input type="time" id="s-start" class="rule-input" style="flex:0.5">
+                            <span style="color:var(--text-muted)">to</span>
+                            <input type="time" id="s-end" class="rule-input" style="flex:0.5">
+                            <input type="text" id="s-aliases" class="rule-input" placeholder="Aliases (comma separated)">
+                        </div>
+                        <div style="text-align:right;">
+                            <button class="rule-btn" onclick="addShift()">Save Shift</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relationships Tab -->
+                <div id="tab-relationships" class="rule-content" style="display:none;">
+                    <h3 style="margin-bottom: 15px; font-size:1rem; color:var(--text-muted);">Table Relationships</h3>
+                    <div id="relationships-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:25px;"></div>
+                    
+                    <h4 style="margin-bottom: 10px; color:var(--text-main);">Add New Relationship</h4>
+                    <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border-color);">
+                        <div class="form-row">
+                            <input type="text" id="r-from-table" class="rule-input" placeholder="From Table">
+                            <input type="text" id="r-from-column" class="rule-input" placeholder="From Column">
+                        </div>
+                        <div class="form-row" style="justify-content:center;color:var(--accent);">↓</div>
+                        <div class="form-row">
+                            <input type="text" id="r-to-table" class="rule-input" placeholder="To Table">
+                            <input type="text" id="r-to-column" class="rule-input" placeholder="To Column">
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="r-description" class="rule-input" placeholder="Description of relationship">
+                        </div>
+                        <div style="text-align:right;">
+                            <button class="rule-btn" onclick="addRelationship()">Save Relationship</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exclude Words Tab -->
+                <div id="tab-excludes" class="rule-content" style="display:none;">
+                    <h3 style="margin-bottom: 15px; font-size:1rem; color:var(--text-muted);">Excluded Column Words (Score=10 bypassed)</h3>
+                    <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                        <input type="text" id="new-exclude-word" class="rule-input" placeholder="Word to exclude...">
+                        <button onclick="addExcludeWord()" class="rule-btn">Add Word</button>
+                    </div>
+                    <div id="excludes-list" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                </div>
+
+                <!-- AI Prompt Tab -->
+                <div id="tab-prompt" class="rule-content" style="display:none; height: 100%; flex-direction: column;">
+                    <h3 style="margin-bottom: 15px; font-size:1rem; color:var(--text-muted);">AI System Prompt (sql_system.txt)</h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 15px;">Modify the core rules that govern how the AI writes SQL queries. Changes will be saved and the AI engine will reload live.</p>
+                    <textarea id="ai-prompt-editor" style="flex: 1; min-height: 400px; width: 100%; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; color: #a5d6ff; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.9rem; resize: vertical; outline: none; margin-bottom: 15px;"></textarea>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button onclick="savePrompt()" class="rule-btn" style="background: var(--accent); color: white;">Save & Reload AI</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="padding:15px 24px; border-top: 1px solid var(--border-color); font-size:0.8rem; color:var(--text-muted); text-align:center;">
+                Changes are saved instantly to <code>config/kpi_catalog.json</code> and applied live.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.rule-content').forEach(el => el.style.display = 'none');
+            document.getElementById('tab-' + tabId).style.display = tabId === 'prompt' ? 'flex' : 'block';
+            document.querySelectorAll('.rule-tab').forEach(el => {
+                el.style.color = 'var(--text-muted)';
+                el.style.borderBottom = 'none';
+                el.classList.remove('active');
+            });
+            const activeTab = document.querySelector(`.rule-tab[onclick="switchTab('${tabId}')"]`);
+            activeTab.style.color = 'var(--primary)';
+            activeTab.style.borderBottom = '2px solid var(--primary)';
+            activeTab.classList.add('active');
+        }
+
+        async function loadRules() {
+            try {
+                const res = await fetch('/rules');
+                const data = await res.json();
+                renderRules(data);
+                
+                const pRes = await fetch('/rules/prompt');
+                const pData = await pRes.json();
+                document.getElementById('ai-prompt-editor').value = pData.content;
+            } catch (e) {
+                console.error("Failed to load rules", e);
+            }
+        }
+
+        async function savePrompt() {
+            const content = document.getElementById('ai-prompt-editor').value;
+            const btn = document.querySelector('#tab-prompt button');
+            const originalText = btn.innerText;
+            btn.innerText = "Saving...";
+            try {
+                const res = await fetch('/rules/prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                if(res.ok) {
+                    btn.innerText = "Saved & Reloaded!";
+                    setTimeout(() => btn.innerText = originalText, 2000);
+                } else {
+                    alert("Failed to save prompt");
+                    btn.innerText = originalText;
+                }
+            } catch (e) {
+                alert("Error saving prompt: " + e.message);
+                btn.innerText = originalText;
+            }
+        }
+
+        function renderRules(data) {
+            // Formulas
+            const fList = document.getElementById('formulas-list');
+            fList.innerHTML = '';
+            Object.values(data.formulas || {}).forEach(f => {
+                fList.innerHTML += `
+                    <div style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.05); padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:600; color:var(--text-main); margin-bottom:5px;">${f.metric} <span style="font-size:0.8em; color:var(--text-muted); font-weight:normal;">(${f.table})</span></div>
+                            <div style="font-size:0.85em; color:var(--text-muted); font-family:monospace;">${f.formula}</div>
+                            <div style="font-size:0.8em; color:var(--accent); margin-top:5px;">Aliases: ${f.aliases.join(', ')}</div>
+                        </div>
+                        <button class="rule-btn-danger" onclick="deleteFormula('${f.metric}')">Delete</button>
+                    </div>
+                `;
+            });
+
+            // Shifts
+            const sList = document.getElementById('shifts-list');
+            sList.innerHTML = '';
+            Object.values(data.shifts || {}).forEach(s => {
+                sList.innerHTML += `
+                    <div style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.05); padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:600; color:var(--text-main); margin-bottom:5px;">${s.label} <span style="font-size:0.8em; color:var(--text-muted); font-weight:normal;">(${s.start} - ${s.end})</span></div>
+                            <div style="font-size:0.8em; color:var(--primary); margin-top:5px;">Aliases: ${s.aliases.join(', ')}</div>
+                        </div>
+                        <button class="rule-btn-danger" onclick="deleteShift('${s.name}')">Delete</button>
+                    </div>
+                `;
+            });
+
+            // Excludes
+            const eList = document.getElementById('excludes-list');
+            eList.innerHTML = '';
+            (data.exclude_column_words || []).forEach(word => {
+                eList.innerHTML += `
+                    <div style="background:rgba(255,59,48,0.1); border:1px solid rgba(255,59,48,0.3); color:var(--text-main); padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:8px; font-size:0.9rem;">
+                        ${word}
+                        <button onclick="removeExcludeWord('${word}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem; line-height:1;">&times;</button>
+                    </div>
+                `;
+            });
+
+            // Relationships
+            const rList = document.getElementById('relationships-list');
+            rList.innerHTML = '';
+            (data.relationships || []).forEach(r => {
+                rList.innerHTML += `
+                    <div style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.05); padding:15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:10px; font-family:monospace; font-size:0.9rem;">
+                                <span style="color:var(--primary)">${r.from_table}.${r.from_column}</span>
+                                <span style="color:var(--text-muted)">→</span>
+                                <span style="color:var(--accent)">${r.to_table}.${r.to_column}</span>
+                            </div>
+                            <div style="font-size:0.85em; color:var(--text-muted); margin-top:8px;">${r.description}</div>
+                        </div>
+                        <button class="rule-btn-danger" onclick="deleteRelationship('${r.from_table}', '${r.from_column}', '${r.to_table}', '${r.to_column}')">Delete</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function addFormula() {
+            const payload = {
+                metric: document.getElementById('f-metric').value,
+                table: document.getElementById('f-table').value,
+                formula: document.getElementById('f-formula').value,
+                aliases: document.getElementById('f-aliases').value.split(',').map(s=>s.trim()).filter(s=>s),
+                query: document.getElementById('f-query').value
+            };
+            if(!payload.metric || !payload.table || !payload.formula) return alert("Missing fields");
+            await fetch('/rules/formula', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            loadRules();
+        }
+
+        async function deleteFormula(metric) {
+            await fetch('/rules/formula/' + encodeURIComponent(metric), { method: 'DELETE' });
+            loadRules();
+        }
+
+        async function addShift() {
+            const startStr = document.getElementById('s-start').value;
+            const endStr = document.getElementById('s-end').value;
+            const payload = {
+                name: document.getElementById('s-name').value,
+                label: document.getElementById('s-label').value,
+                start: startStr.length === 5 ? startStr + ":00" : startStr,
+                end: endStr.length === 5 ? endStr + ":00" : endStr,
+                aliases: document.getElementById('s-aliases').value.split(',').map(s=>s.trim()).filter(s=>s)
+            };
+            if(!payload.name || !payload.start || !payload.end) return alert("Missing fields");
+            await fetch('/rules/shift', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            loadRules();
+        }
+
+        async function deleteShift(name) {
+            await fetch('/rules/shift/' + encodeURIComponent(name), { method: 'DELETE' });
+            loadRules();
+        }
+
+        async function addRelationship() {
+            const payload = {
+                from_table: document.getElementById('r-from-table').value,
+                from_column: document.getElementById('r-from-column').value,
+                to_table: document.getElementById('r-to-table').value,
+                to_column: document.getElementById('r-to-column').value,
+                description: document.getElementById('r-description').value
+            };
+            if(!payload.from_table || !payload.to_table) return alert("Missing fields");
+            await fetch('/rules/relationship', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            loadRules();
+        }
+
+        async function deleteRelationship(fromTable, fromCol, toTable, toCol) {
+            const url = `/rules/relationship?from_table=${encodeURIComponent(fromTable)}&from_column=${encodeURIComponent(fromCol)}&to_table=${encodeURIComponent(toTable)}&to_column=${encodeURIComponent(toCol)}`;
+            await fetch(url, { method: 'DELETE' });
+            loadRules();
+        }
+
+        async function addExcludeWord() {
+            const word = document.getElementById('new-exclude-word').value.trim();
+            if (!word) return;
+            await fetch('/rules/exclude-word', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({word: word}) });
+            document.getElementById('new-exclude-word').value = '';
+            loadRules();
+        }
+
+        async function removeExcludeWord(word) {
+            await fetch('/rules/exclude-word/' + encodeURIComponent(word), { method: 'DELETE' });
+            loadRules();
+        }
+    </script>
+
 </body>
 </html>

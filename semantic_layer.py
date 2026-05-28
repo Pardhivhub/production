@@ -72,7 +72,17 @@ class SemanticLayer:
         
         # Quick heuristic descriptions for common patterns
         name_lower = table_name.lower()
-        if "feedback" in name_lower or "production" in name_lower:
+        if "ega" in name_lower:
+            return "Excess Give Away (EGA) details per machine and variant"
+        elif "oee" in name_lower:
+            return "Overall Equipment Effectiveness metrics per machine"
+        elif "wastage" in name_lower or "waste" in name_lower:
+            return "Production wastage and scrap records with reasons"
+        elif "employee" in name_lower or "staff" in name_lower:
+            return "Employee list with roles, certifications and shift assignments"
+        elif "feeder" in name_lower and "stat" in name_lower:
+            return "Feeder cycle statistics and amplitude performance data"
+        elif "feedback" in name_lower or "production" in name_lower:
             return f"Production feedback and performance data tracking actual vs target metrics"
         elif "silo" in name_lower or "inventory" in name_lower:
             return f"Inventory levels and stock tracking for raw materials"
@@ -175,14 +185,26 @@ class SemanticLayer:
         Return common synonyms for a column name to improve query understanding.
         """
         synonyms_map = {
-            "actual_weight": ["real weight", "measured weight", "final weight"],
+            "actual_weight": ["real weight", "measured weight", "final weight", "produced weight"],
             "target_weight": ["expected weight", "goal weight", "spec weight"],
             "actual_speed": ["real speed", "current speed", "production rate"],
             "variant": ["product", "sku", "item", "product type"],
             "shift": ["work shift", "shift time", "shift period"],
             "created_at": ["timestamp", "date", "time", "created date"],
             "cost": ["price", "expense", "charge"],
-            "level_kg": ["inventory", "stock", "quantity"]
+            "level_kg": ["inventory", "stock", "quantity"],
+            "ega_percent": ["excess giveaway", "give away percent", "extra weight", "overweight percent"],
+            "oee_percent": ["overall efficiency", "equipment effectiveness", "oee score"],
+            "unix_timestamp": ["timestamp", "time", "date", "recorded at", "log time"],
+            "machine_id": ["machine", "loop", "weigher", "line id"],
+            "topic": ["feeder id", "feeder name", "machine topic"]
         }
         
         return synonyms_map.get(col_name.lower(), [])
+
+    def invalidate_cache(self, table_name: str = None):
+        if table_name:
+            self.cache.pop(table_name, None)
+        else:
+            self.cache.clear()
+        logger.info(f"Semantic cache invalidated: {table_name or 'all'}")
