@@ -66,18 +66,21 @@ class QueryRouter:
 
         # 3. Help & List Tables
         help_keywords = {"help", "how to use", "instructions", "commands", "menu"}
-        list_tables_queries = {
-            "list all tables", "list tables", "show all tables", "show tables",
-            "what tables do you have", "what tables are there", "connected tables"
-        }
-        if q_lower in help_keywords or any(h in q_lower for h in help_keywords) or q_lower in list_tables_queries:
+        
+        # Highly robust check for table listing queries, even with typos like "ist all the tables"
+        is_list_tables_query = (
+            ("table" in q_lower or "tables" in q_lower) and
+            any(w in q_lower for w in ["list", "show", "what", "connected", "active", "available", "ist", "give", "display", "get"])
+        )
+        
+        if q_lower in help_keywords or any(h in q_lower for h in help_keywords) or is_list_tables_query:
             tables = self._get_tables()
             table_list = ""
             if tables:
                 names = [self._get_table_name(t) for t in tables]
                 table_list = "\n\n**Connected Tables:**\n" + "\n".join(f"- `{n}`" for n in names)
             
-            if q_lower in list_tables_queries:
+            if is_list_tables_query:
                 return {
                     "type": "greeting",
                     "response": f"Here are the active tables in the currently connected database:{table_list}"
