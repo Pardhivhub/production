@@ -1,0 +1,3155 @@
+Found 18 tables in iiot_feedback. Generating previews...
+
+=========================================
+📋 Table 1/18: b2b_client_orders
+=========================================
+Columns:
+  - order_id (integer)
+  - client_name (character varying)
+  - order_date (date)
+  - product_code (character varying)
+  - quantity (integer)
+  - total_amount (numeric)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "order_id": 1,
+    "client_name": "Sweet Corp",
+    "order_date": "2025-01-05",
+    "product_code": "CANDY_X",
+    "quantity": 10000,
+    "total_amount": 15000.0
+  },
+  {
+    "order_id": 2,
+    "client_name": "Confection Ltd",
+    "order_date": "2025-01-08",
+    "product_code": "CANDY_Y",
+    "quantity": 5000,
+    "total_amount": 8500.0
+  },
+  {
+    "order_id": 3,
+    "client_name": "Sweet Corp",
+    "order_date": "2025-01-05",
+    "product_code": "CANDY_X",
+    "quantity": 10000,
+    "total_amount": 15000.0
+  },
+  {
+    "order_id": 4,
+    "client_name": "Confection Ltd",
+    "order_date": "2025-01-08",
+    "product_code": "CANDY_Y",
+    "quantity": 5000,
+    "total_amount": 8500.0
+  },
+  {
+    "order_id": 5,
+    "client_name": "Sweet Corp",
+    "order_date": "2025-01-05",
+    "product_code": "CANDY_X",
+    "quantity": 10000,
+    "total_amount": 15000.0
+  },
+  {
+    "order_id": 6,
+    "client_name": "Confection Ltd",
+    "order_date": "2025-01-08",
+    "product_code": "CANDY_Y",
+    "quantity": 5000,
+    "total_amount": 8500.0
+  },
+  {
+    "order_id": 7,
+    "client_name": "Sweet Corp",
+    "order_date": "2025-01-05",
+    "product_code": "CANDY_X",
+    "quantity": 10000,
+    "total_amount": 15000.0
+  },
+  {
+    "order_id": 8,
+    "client_name": "Confection Ltd",
+    "order_date": "2025-01-08",
+    "product_code": "CANDY_Y",
+    "quantity": 5000,
+    "total_amount": 8500.0
+  },
+  {
+    "order_id": 9,
+    "client_name": "Sweet Corp",
+    "order_date": "2025-01-05",
+    "product_code": "CANDY_X",
+    "quantity": 10000,
+    "total_amount": 15000.0
+  },
+  {
+    "order_id": 10,
+    "client_name": "Confection Ltd",
+    "order_date": "2025-01-08",
+    "product_code": "CANDY_Y",
+    "quantity": 5000,
+    "total_amount": 8500.0
+  }
+]
+
+=========================================
+📋 Table 2/18: ega_details_data
+=========================================
+Columns:
+  - id (integer)
+  - machine_id (character varying)
+  - loop_id (character varying)
+  - grammage (character varying)
+  - variant (character varying)
+  - start_time (timestamp without time zone)
+  - actual_weight (double precision)
+  - target_weight (double precision)
+  - ega_percent (double precision)
+  - created_at (timestamp without time zone)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "id": 1,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "start_time": "2026-05-20T08:00:00",
+    "actual_weight": 102.5,
+    "target_weight": 100.0,
+    "ega_percent": 2.5,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 2,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "start_time": "2026-05-20T09:00:00",
+    "actual_weight": 103.1,
+    "target_weight": 100.0,
+    "ega_percent": 3.1,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 3,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "start_time": "2026-05-20T10:00:00",
+    "actual_weight": 101.9,
+    "target_weight": 100.0,
+    "ega_percent": 1.9,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 4,
+    "machine_id": "M02",
+    "loop_id": "L02",
+    "grammage": "250g",
+    "variant": "Round Cut",
+    "start_time": "2026-05-20T08:00:00",
+    "actual_weight": 256.4,
+    "target_weight": 250.0,
+    "ega_percent": 2.56,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 5,
+    "machine_id": "M02",
+    "loop_id": "L02",
+    "grammage": "250g",
+    "variant": "Round Cut",
+    "start_time": "2026-05-20T09:00:00",
+    "actual_weight": 258.2,
+    "target_weight": 250.0,
+    "ega_percent": 3.28,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 6,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "200g",
+    "variant": "Round Cut",
+    "start_time": "2026-05-20T08:00:00",
+    "actual_weight": 204.5,
+    "target_weight": 200.0,
+    "ega_percent": 2.25,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 7,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "start_time": "2026-05-20T08:00:00",
+    "actual_weight": 102.5,
+    "target_weight": 100.0,
+    "ega_percent": 2.5,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 8,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "start_time": "2026-05-20T09:00:00",
+    "actual_weight": 103.1,
+    "target_weight": 100.0,
+    "ega_percent": 3.1,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 9,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "start_time": "2026-05-20T10:00:00",
+    "actual_weight": 101.9,
+    "target_weight": 100.0,
+    "ega_percent": 1.9,
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 10,
+    "machine_id": "M02",
+    "loop_id": "L02",
+    "grammage": "250g",
+    "variant": "Round Cut",
+    "start_time": "2026-05-20T08:00:00",
+    "actual_weight": 256.4,
+    "target_weight": 250.0,
+    "ega_percent": 2.56,
+    "created_at": "2026-05-20T14:37:20.420944"
+  }
+]
+
+=========================================
+📋 Table 3/18: electric_meter_hourly
+=========================================
+Columns:
+  - meter_id (integer)
+  - timestamp (timestamp without time zone)
+  - kwh_consumed (numeric)
+  - peak_demand_kw (numeric)
+  - cost (numeric)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "meter_id": 1,
+    "timestamp": "2026-01-10T23:15:07.532861",
+    "kwh_consumed": 120.35,
+    "peak_demand_kw": 81.99,
+    "cost": 24.03
+  },
+  {
+    "meter_id": 2,
+    "timestamp": "2026-01-10T22:15:07.532861",
+    "kwh_consumed": 117.71,
+    "peak_demand_kw": 112.84,
+    "cost": 15.82
+  },
+  {
+    "meter_id": 3,
+    "timestamp": "2026-01-10T21:15:07.532861",
+    "kwh_consumed": 116.19,
+    "peak_demand_kw": 116.6,
+    "cost": 22.14
+  },
+  {
+    "meter_id": 4,
+    "timestamp": "2026-01-10T20:15:07.532861",
+    "kwh_consumed": 140.66,
+    "peak_demand_kw": 109.04,
+    "cost": 20.5
+  },
+  {
+    "meter_id": 5,
+    "timestamp": "2026-01-10T19:15:07.532861",
+    "kwh_consumed": 126.45,
+    "peak_demand_kw": 92.02,
+    "cost": 17.42
+  },
+  {
+    "meter_id": 6,
+    "timestamp": "2026-01-10T18:15:07.532861",
+    "kwh_consumed": 115.13,
+    "peak_demand_kw": 106.93,
+    "cost": 23.92
+  },
+  {
+    "meter_id": 7,
+    "timestamp": "2026-01-10T17:15:07.532861",
+    "kwh_consumed": 112.9,
+    "peak_demand_kw": 116.41,
+    "cost": 23.06
+  },
+  {
+    "meter_id": 8,
+    "timestamp": "2026-01-10T16:15:07.532861",
+    "kwh_consumed": 112.93,
+    "peak_demand_kw": 95.96,
+    "cost": 20.63
+  },
+  {
+    "meter_id": 9,
+    "timestamp": "2026-01-10T15:15:07.532861",
+    "kwh_consumed": 129.92,
+    "peak_demand_kw": 89.47,
+    "cost": 18.47
+  },
+  {
+    "meter_id": 10,
+    "timestamp": "2026-01-10T14:15:07.532861",
+    "kwh_consumed": 114.5,
+    "peak_demand_kw": 107.38,
+    "cost": 15.98
+  }
+]
+
+=========================================
+📋 Table 4/18: employees_list
+=========================================
+Columns:
+  - id (integer)
+  - name (character varying)
+  - role (character varying)
+  - created_at (timestamp without time zone)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "id": 1,
+    "name": "John Smith",
+    "role": "Operator",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 2,
+    "name": "Jane Doe",
+    "role": "Operator",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 3,
+    "name": "Alice Johnson",
+    "role": "Operator",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 4,
+    "name": "Bob Ross",
+    "role": "JTA",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 5,
+    "name": "Charlie Brown",
+    "role": "JTA",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 6,
+    "name": "David Vance",
+    "role": "Shift Incharge",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 7,
+    "name": "Emily Watson",
+    "role": "Shift Incharge",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 9,
+    "name": "John Smith Dup 1",
+    "role": "Operator",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 10,
+    "name": "Jane Doe Dup 2",
+    "role": "Operator",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 11,
+    "name": "Alice Johnson Dup 3",
+    "role": "Operator",
+    "created_at": "2026-05-20T14:37:20.420944"
+  }
+]
+
+=========================================
+📋 Table 5/18: factory_humidity_logs
+=========================================
+Columns:
+  - reading_id (integer)
+  - timestamp (timestamp without time zone)
+  - zone (character varying)
+  - humidity_pct (numeric)
+  - temperature_celsius (numeric)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "reading_id": 1,
+    "timestamp": "2026-01-10T23:15:07.530326",
+    "zone": "Zone_3",
+    "humidity_pct": 63.05,
+    "temperature_celsius": 20.92
+  },
+  {
+    "reading_id": 2,
+    "timestamp": "2026-01-10T22:15:07.530326",
+    "zone": "Zone_1",
+    "humidity_pct": 45.59,
+    "temperature_celsius": 24.34
+  },
+  {
+    "reading_id": 3,
+    "timestamp": "2026-01-10T21:15:07.530326",
+    "zone": "Zone_2",
+    "humidity_pct": 51.82,
+    "temperature_celsius": 27.43
+  },
+  {
+    "reading_id": 4,
+    "timestamp": "2026-01-10T20:15:07.530326",
+    "zone": "Zone_3",
+    "humidity_pct": 57.57,
+    "temperature_celsius": 20.44
+  },
+  {
+    "reading_id": 5,
+    "timestamp": "2026-01-10T19:15:07.530326",
+    "zone": "Zone_2",
+    "humidity_pct": 58.44,
+    "temperature_celsius": 22.68
+  },
+  {
+    "reading_id": 6,
+    "timestamp": "2026-01-10T18:15:07.530326",
+    "zone": "Zone_2",
+    "humidity_pct": 49.14,
+    "temperature_celsius": 25.14
+  },
+  {
+    "reading_id": 7,
+    "timestamp": "2026-01-10T17:15:07.530326",
+    "zone": "Zone_2",
+    "humidity_pct": 62.27,
+    "temperature_celsius": 20.01
+  },
+  {
+    "reading_id": 8,
+    "timestamp": "2026-01-10T16:15:07.530326",
+    "zone": "Zone_1",
+    "humidity_pct": 51.77,
+    "temperature_celsius": 21.22
+  },
+  {
+    "reading_id": 9,
+    "timestamp": "2026-01-10T15:15:07.530326",
+    "zone": "Zone_3",
+    "humidity_pct": 63.46,
+    "temperature_celsius": 20.69
+  },
+  {
+    "reading_id": 10,
+    "timestamp": "2026-01-10T14:15:07.530326",
+    "zone": "Zone_1",
+    "humidity_pct": 63.54,
+    "temperature_celsius": 20.06
+  }
+]
+
+=========================================
+📋 Table 6/18: feedback_data
+=========================================
+Columns:
+  - id (integer)
+  - file_source (character varying)
+  - row_number (integer)
+  - unix_timestamp (timestamp without time zone)
+  - topic (character varying)
+  - variant (character varying)
+  - target_weight (double precision)
+  - actual_weight (double precision)
+  - actual_speed (double precision)
+  - target_speed (double precision)
+  - actual_count (double precision)
+  - rf1_amplitude (double precision)
+  - rf2_amplitude (double precision)
+  - rf3_amplitude (double precision)
+  - rf4_amplitude (double precision)
+  - rf5_amplitude (double precision)
+  - rf6_amplitude (double precision)
+  - rf7_amplitude (double precision)
+  - rf8_amplitude (double precision)
+  - rf9_amplitude (double precision)
+  - rf1_weight_avg (double precision)
+  - rf2_weight_avg (double precision)
+  - rf3_weight_avg (double precision)
+  - rf4_weight_avg (double precision)
+  - rf5_weight_avg (double precision)
+  - rf6_weight_avg (double precision)
+  - rf7_weight_avg (double precision)
+  - rf8_weight_avg (double precision)
+  - rf9_weight_avg (double precision)
+  - rf1_zeros_count (integer)
+  - rf2_zeros_count (integer)
+  - rf3_zeros_count (integer)
+  - rf4_zeros_count (integer)
+  - rf5_zeros_count (integer)
+  - rf6_zeros_count (integer)
+  - rf7_zeros_count (integer)
+  - rf8_zeros_count (integer)
+  - rf9_zeros_count (integer)
+  - rf1_worked_count (integer)
+  - rf2_worked_count (integer)
+  - rf3_worked_count (integer)
+  - rf4_worked_count (integer)
+  - rf5_worked_count (integer)
+  - rf6_worked_count (integer)
+  - rf7_worked_count (integer)
+  - rf8_worked_count (integer)
+  - rf9_worked_count (integer)
+  - alert (text)
+  - operator_feedback (text)
+  - raw_data (jsonb)
+  - created_at (timestamp without time zone)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "id": 130,
+    "file_source": "feed_back_2025-11-22.csv",
+    "row_number": 45,
+    "unix_timestamp": "2025-11-22T01:15:00",
+    "topic": "weigher13_c2",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 23.2,
+    "actual_speed": 72.0,
+    "target_speed": 80.0,
+    "actual_count": 1083.0,
+    "rf1_amplitude": 52.0,
+    "rf2_amplitude": 52.0,
+    "rf3_amplitude": 52.0,
+    "rf4_amplitude": 52.0,
+    "rf5_amplitude": 52.0,
+    "rf6_amplitude": 52.0,
+    "rf7_amplitude": 52.0,
+    "rf8_amplitude": 52.0,
+    "rf9_amplitude": 52.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 446,
+    "rf2_zeros_count": 189,
+    "rf3_zeros_count": 285,
+    "rf4_zeros_count": 341,
+    "rf5_zeros_count": 297,
+    "rf6_zeros_count": 306,
+    "rf7_zeros_count": 429,
+    "rf8_zeros_count": 317,
+    "rf9_zeros_count": 135,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.09,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher13_c2",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 9756,
+      "IF_Flow_In": 17672,
+      "DF_Flow_Out": 9705,
+      "IF_Flow_Out": 17823,
+      "RF 1 Weight": 6.0,
+      "RF 1 Worked": 206,
+      "RF 2 Weight": 10.1,
+      "RF 2 Worked": 205,
+      "RF 3 Weight": 8.0,
+      "RF 3 Worked": 223,
+      "RF 4 Weight": 6.4,
+      "RF 4 Worked": 212,
+      "RF 5 Weight": 6.7,
+      "RF 5 Worked": 230,
+      "RF 6 Weight": 6.8,
+      "RF 6 Worked": 218,
+      "RF 7 Weight": 6.7,
+      "RF 7 Worked": 221,
+      "RF 8 Weight": 6.6,
+      "RF 8 Worked": 226,
+      "RF 9 Weight": 11.1,
+      "RF 9 Worked": 225,
+      "Speed Ratio": 0.9,
+      "Actual Count": 1083,
+      "Actual Speed": 72,
+      "proper_count": 1083,
+      "target_Speed": 80,
+      "Actual Weight": 23.2,
+      "Unix_Timestamp": "11/22/2025 1:15",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 27,
+      "RF 2 Time (40788)": 27,
+      "RF 3 Time (40789)": 27,
+      "RF 4 Time (40790)": 27,
+      "RF 5 Time (40791)": 27,
+      "RF 6 Time (40792)": 27,
+      "RF 7 Time (40793)": 27,
+      "RF 8 Time (40794)": 28,
+      "RF 9 Time (40795)": 28,
+      "DF 1 Weight (30461)": 385,
+      "IF 1 Weight (30463)": 446,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 60,
+      "IF 1 Amplitude (40666)": 50,
+      "RF 1 Amplitude (40753)": 52,
+      "RF 2 Amplitude (40754)": 52,
+      "RF 3 Amplitude (40755)": 52,
+      "RF 4 Amplitude (40756)": 52,
+      "RF 5 Amplitude (40757)": 52,
+      "RF 6 Amplitude (40758)": 52,
+      "RF 7 Amplitude (40759)": 52,
+      "RF 8 Amplitude (40760)": 52,
+      "RF 9 Amplitude (40761)": 52,
+      "DF 1 Weight (Constant) (41981)": 350,
+      "IF 1 Weight (Constant) (41984)": 400,
+      "RF 1 Zeros (30332)_zeros_count": 446,
+      "RF 2 Zeros (30334)_zeros_count": 189,
+      "RF 3 Zeros (30336)_zeros_count": 285,
+      "RF 4 Zeros (30338)_zeros_count": 341,
+      "RF 5 Zeros (30340)_zeros_count": 297,
+      "RF 6 Zeros (30342)_zeros_count": 306,
+      "RF 7 Zeros (30344)_zeros_count": 429,
+      "RF 8 Zeros (30346)_zeros_count": 317,
+      "RF 9 Zeros (30348)_zeros_count": 135,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.2
+    },
+    "created_at": "2026-01-07T17:43:10.756342"
+  },
+  {
+    "id": 44,
+    "file_source": "feed_back_2025-11-22-original.csv",
+    "row_number": 2,
+    "unix_timestamp": "2025-11-22T00:00:00",
+    "topic": "weigher13_c2",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 24.5,
+    "actual_speed": 76.0,
+    "target_speed": 80.0,
+    "actual_count": 1139.0,
+    "rf1_amplitude": 50.0,
+    "rf2_amplitude": 50.0,
+    "rf3_amplitude": 50.0,
+    "rf4_amplitude": 50.0,
+    "rf5_amplitude": 50.0,
+    "rf6_amplitude": 50.0,
+    "rf7_amplitude": 50.0,
+    "rf8_amplitude": 50.0,
+    "rf9_amplitude": 50.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 412,
+    "rf2_zeros_count": 274,
+    "rf3_zeros_count": 383,
+    "rf4_zeros_count": 332,
+    "rf5_zeros_count": 357,
+    "rf6_zeros_count": 416,
+    "rf7_zeros_count": 405,
+    "rf8_zeros_count": 356,
+    "rf9_zeros_count": 237,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "RF 9 - decrease amplitude by 2. | RF 9 active way more - check RF 9 calibration.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.53,
+      "Alert": "RF 9 - decrease amplitude by 2. | RF 9 active way more - check RF 9 calibration.",
+      "Color": "RF 9",
+      "Topic": "weigher13_c2",
+      "Variant": "Flat Cut",
+      "Color_ega": "yes",
+      "ega_limit": 0.1,
+      "DF_Flow_In": 9824,
+      "IF_Flow_In": 16562,
+      "DF_Flow_Out": 9844,
+      "IF_Flow_Out": 16559,
+      "RF 1 Weight": 4.7,
+      "RF 1 Worked": 218,
+      "RF 2 Weight": 9.0,
+      "RF 2 Worked": 229,
+      "RF 3 Weight": 7.2,
+      "RF 3 Worked": 210,
+      "RF 4 Weight": 5.3,
+      "RF 4 Worked": 234,
+      "RF 5 Weight": 6.0,
+      "RF 5 Worked": 233,
+      "RF 6 Weight": 6.2,
+      "RF 6 Worked": 210,
+      "RF 7 Weight": 6.0,
+      "RF 7 Worked": 215,
+      "RF 8 Weight": 5.7,
+      "RF 8 Worked": 238,
+      "RF 9 Weight": 10.2,
+      "RF 9 Worked": 252,
+      "Speed Ratio": 0.95,
+      "Actual Count": 1139,
+      "Actual Speed": 76,
+      "proper_count": 1139,
+      "target_Speed": 80,
+      "Actual Weight": 24.5,
+      "Unix_Timestamp": "11/22/2025 0:00",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 25,
+      "RF 2 Time (40788)": 25,
+      "RF 3 Time (40789)": 25,
+      "RF 4 Time (40790)": 25,
+      "RF 5 Time (40791)": 25,
+      "RF 6 Time (40792)": 25,
+      "RF 7 Time (40793)": 25,
+      "RF 8 Time (40794)": 25,
+      "RF 9 Time (40795)": 25,
+      "DF 1 Weight (30461)": 412,
+      "IF 1 Weight (30463)": 429,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 64,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 50,
+      "RF 2 Amplitude (40754)": 50,
+      "RF 3 Amplitude (40755)": 50,
+      "RF 4 Amplitude (40756)": 50,
+      "RF 5 Amplitude (40757)": 50,
+      "RF 6 Amplitude (40758)": 50,
+      "RF 7 Amplitude (40759)": 50,
+      "RF 8 Amplitude (40760)": 50,
+      "RF 9 Amplitude (40761)": 50,
+      "DF 1 Weight (Constant) (41981)": 350,
+      "IF 1 Weight (Constant) (41984)": 400,
+      "RF 1 Zeros (30332)_zeros_count": 412,
+      "RF 2 Zeros (30334)_zeros_count": 274,
+      "RF 3 Zeros (30336)_zeros_count": 383,
+      "RF 4 Zeros (30338)_zeros_count": 332,
+      "RF 5 Zeros (30340)_zeros_count": 357,
+      "RF 6 Zeros (30342)_zeros_count": 416,
+      "RF 7 Zeros (30344)_zeros_count": 405,
+      "RF 8 Zeros (30346)_zeros_count": 356,
+      "RF 9 Zeros (30348)_zeros_count": 237,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.4
+    },
+    "created_at": "2026-01-07T17:43:10.493988"
+  },
+  {
+    "id": 45,
+    "file_source": "feed_back_2025-11-22-original.csv",
+    "row_number": 3,
+    "unix_timestamp": "2025-11-22T01:00:00",
+    "topic": "weigher16_c1",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 20.5,
+    "actual_speed": 64.0,
+    "target_speed": 80.0,
+    "actual_count": 953.0,
+    "rf1_amplitude": 50.0,
+    "rf2_amplitude": 40.0,
+    "rf3_amplitude": 42.0,
+    "rf4_amplitude": 43.0,
+    "rf5_amplitude": 43.0,
+    "rf6_amplitude": 42.0,
+    "rf7_amplitude": 43.0,
+    "rf8_amplitude": 45.0,
+    "rf9_amplitude": 42.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 275,
+    "rf2_zeros_count": 178,
+    "rf3_zeros_count": 181,
+    "rf4_zeros_count": 228,
+    "rf5_zeros_count": 232,
+    "rf6_zeros_count": 495,
+    "rf7_zeros_count": 442,
+    "rf8_zeros_count": 240,
+    "rf9_zeros_count": 201,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "No Required Feed in IF/DF, please check.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.54,
+      "Alert": "No Required Feed in IF/DF, please check.",
+      "Color": "Whole Row",
+      "Topic": "weigher16_c1",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 8019,
+      "IF_Flow_In": 15270,
+      "DF_Flow_Out": 8030,
+      "IF_Flow_Out": 15195,
+      "RF 1 Weight": 4.6,
+      "RF 1 Worked": 210,
+      "RF 2 Weight": 10.7,
+      "RF 2 Worked": 188,
+      "RF 3 Weight": 7.8,
+      "RF 3 Worked": 176,
+      "RF 4 Weight": 9.5,
+      "RF 4 Worked": 214,
+      "RF 5 Weight": 8.8,
+      "RF 5 Worked": 215,
+      "RF 6 Weight": 6.6,
+      "RF 6 Worked": 197,
+      "RF 7 Weight": 6.3,
+      "RF 7 Worked": 225,
+      "RF 8 Weight": 7.1,
+      "RF 8 Worked": 214,
+      "RF 9 Weight": 7.6,
+      "RF 9 Worked": 215,
+      "Speed Ratio": 0.8,
+      "Actual Count": 953,
+      "Actual Speed": 64,
+      "proper_count": 953,
+      "target_Speed": 80,
+      "Actual Weight": 20.5,
+      "Unix_Timestamp": "11/22/2025 1:00",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 25,
+      "RF 2 Time (40788)": 24,
+      "RF 3 Time (40789)": 26,
+      "RF 4 Time (40790)": 27,
+      "RF 5 Time (40791)": 27,
+      "RF 6 Time (40792)": 26,
+      "RF 7 Time (40793)": 27,
+      "RF 8 Time (40794)": 27,
+      "RF 9 Time (40795)": 22,
+      "DF 1 Weight (30461)": 306,
+      "IF 1 Weight (30463)": 364,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 60,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 50,
+      "RF 2 Amplitude (40754)": 40,
+      "RF 3 Amplitude (40755)": 42,
+      "RF 4 Amplitude (40756)": 43,
+      "RF 5 Amplitude (40757)": 43,
+      "RF 6 Amplitude (40758)": 42,
+      "RF 7 Amplitude (40759)": 43,
+      "RF 8 Amplitude (40760)": 45,
+      "RF 9 Amplitude (40761)": 42,
+      "DF 1 Weight (Constant) (41981)": 250,
+      "IF 1 Weight (Constant) (41984)": 300,
+      "RF 1 Zeros (30332)_zeros_count": 275,
+      "RF 2 Zeros (30334)_zeros_count": 178,
+      "RF 3 Zeros (30336)_zeros_count": 181,
+      "RF 4 Zeros (30338)_zeros_count": 228,
+      "RF 5 Zeros (30340)_zeros_count": 232,
+      "RF 6 Zeros (30342)_zeros_count": 495,
+      "RF 7 Zeros (30344)_zeros_count": 442,
+      "RF 8 Zeros (30346)_zeros_count": 240,
+      "RF 9 Zeros (30348)_zeros_count": 201,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.2
+    },
+    "created_at": "2026-01-07T17:43:10.493988"
+  },
+  {
+    "id": 87,
+    "file_source": "feed_back_2025-11-22.csv",
+    "row_number": 2,
+    "unix_timestamp": "2025-11-22T00:00:00",
+    "topic": "weigher3_c1",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 22.8,
+    "actual_speed": 71.0,
+    "target_speed": 80.0,
+    "actual_count": 1065.0,
+    "rf1_amplitude": 56.0,
+    "rf2_amplitude": 46.0,
+    "rf3_amplitude": 60.0,
+    "rf4_amplitude": 60.0,
+    "rf5_amplitude": 60.0,
+    "rf6_amplitude": 60.0,
+    "rf7_amplitude": 56.0,
+    "rf8_amplitude": 56.0,
+    "rf9_amplitude": 44.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 374,
+    "rf2_zeros_count": 407,
+    "rf3_zeros_count": 416,
+    "rf4_zeros_count": 361,
+    "rf5_zeros_count": 443,
+    "rf6_zeros_count": 458,
+    "rf7_zeros_count": 450,
+    "rf8_zeros_count": 384,
+    "rf9_zeros_count": 423,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.04,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher3_c1",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 7053,
+      "IF_Flow_In": 13391,
+      "DF_Flow_Out": 7042,
+      "IF_Flow_Out": 13312,
+      "RF 1 Weight": 8.1,
+      "RF 1 Worked": 158,
+      "RF 2 Weight": 7.5,
+      "RF 2 Worked": 153,
+      "RF 3 Weight": 5.3,
+      "RF 3 Worked": 168,
+      "RF 4 Weight": 3.6,
+      "RF 4 Worked": 197,
+      "RF 5 Weight": 4.0,
+      "RF 5 Worked": 148,
+      "RF 6 Weight": 3.3,
+      "RF 6 Worked": 163,
+      "RF 7 Weight": 3.9,
+      "RF 7 Worked": 154,
+      "RF 8 Weight": 6.8,
+      "RF 8 Worked": 165,
+      "RF 9 Weight": 7.7,
+      "RF 9 Worked": 160,
+      "Speed Ratio": 0.8875,
+      "Actual Count": 1065,
+      "Actual Speed": 71,
+      "proper_count": 1065,
+      "target_Speed": 80,
+      "Actual Weight": 22.8,
+      "Unix_Timestamp": "11/22/2025 0:00",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 28,
+      "RF 2 Time (40788)": 23,
+      "RF 3 Time (40789)": 30,
+      "RF 4 Time (40790)": 30,
+      "RF 5 Time (40791)": 30,
+      "RF 6 Time (40792)": 30,
+      "RF 7 Time (40793)": 28,
+      "RF 8 Time (40794)": 28,
+      "RF 9 Time (40795)": 22,
+      "DF 1 Weight (30461)": 408,
+      "IF 1 Weight (30463)": 544,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 60,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 56,
+      "RF 2 Amplitude (40754)": 46,
+      "RF 3 Amplitude (40755)": 60,
+      "RF 4 Amplitude (40756)": 60,
+      "RF 5 Amplitude (40757)": 60,
+      "RF 6 Amplitude (40758)": 60,
+      "RF 7 Amplitude (40759)": 56,
+      "RF 8 Amplitude (40760)": 56,
+      "RF 9 Amplitude (40761)": 44,
+      "DF 1 Weight (Constant) (41981)": 350,
+      "IF 1 Weight (Constant) (41984)": 400,
+      "RF 1 Zeros (30332)_zeros_count": 374,
+      "RF 2 Zeros (30334)_zeros_count": 407,
+      "RF 3 Zeros (30336)_zeros_count": 416,
+      "RF 4 Zeros (30338)_zeros_count": 361,
+      "RF 5 Zeros (30340)_zeros_count": 443,
+      "RF 6 Zeros (30342)_zeros_count": 458,
+      "RF 7 Zeros (30344)_zeros_count": 450,
+      "RF 8 Zeros (30346)_zeros_count": 384,
+      "RF 9 Zeros (30348)_zeros_count": 423,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 20.9
+    },
+    "created_at": "2026-01-07T17:43:10.756342"
+  },
+  {
+    "id": 19,
+    "file_source": "feed_back_2025-11-22-original (2).csv",
+    "row_number": 20,
+    "unix_timestamp": "2025-11-22T09:30:00",
+    "topic": "weigher14_c1",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 20.0,
+    "actual_speed": 62.0,
+    "target_speed": 80.0,
+    "actual_count": 930.0,
+    "rf1_amplitude": 50.0,
+    "rf2_amplitude": 38.0,
+    "rf3_amplitude": 50.0,
+    "rf4_amplitude": 50.0,
+    "rf5_amplitude": 50.0,
+    "rf6_amplitude": 50.0,
+    "rf7_amplitude": 50.0,
+    "rf8_amplitude": 50.0,
+    "rf9_amplitude": 50.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 321,
+    "rf2_zeros_count": 289,
+    "rf3_zeros_count": 268,
+    "rf4_zeros_count": 523,
+    "rf5_zeros_count": 328,
+    "rf6_zeros_count": 515,
+    "rf7_zeros_count": 317,
+    "rf8_zeros_count": 488,
+    "rf9_zeros_count": 305,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.5,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher14_c1",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 5.0,
+      "DF_Flow_In": 8141,
+      "IF_Flow_In": 14274,
+      "DF_Flow_Out": 8050,
+      "IF_Flow_Out": 14426,
+      "RF 1 Weight": 5.9,
+      "RF 1 Worked": 175,
+      "RF 2 Weight": 5.5,
+      "RF 2 Worked": 189,
+      "RF 3 Weight": 5.4,
+      "RF 3 Worked": 196,
+      "RF 4 Weight": 4.7,
+      "RF 4 Worked": 178,
+      "RF 5 Weight": 5.0,
+      "RF 5 Worked": 176,
+      "RF 6 Weight": 4.5,
+      "RF 6 Worked": 180,
+      "RF 7 Weight": 6.2,
+      "RF 7 Worked": 185,
+      "RF 8 Weight": 5.5,
+      "RF 8 Worked": 188,
+      "RF 9 Weight": 5.1,
+      "RF 9 Worked": 181,
+      "Speed Ratio": 0.775,
+      "Actual Count": 930,
+      "Actual Speed": 62,
+      "proper_count": 930,
+      "target_Speed": 80,
+      "Actual Weight": 20.0,
+      "Unix_Timestamp": "11/22/25 9:30",
+      "DF 1 Time (40675)": 25,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 25,
+      "RF 2 Time (40788)": 25,
+      "RF 3 Time (40789)": 25,
+      "RF 4 Time (40790)": 25,
+      "RF 5 Time (40791)": 25,
+      "RF 6 Time (40792)": 25,
+      "RF 7 Time (40793)": 25,
+      "RF 8 Time (40794)": 25,
+      "RF 9 Time (40795)": 25,
+      "DF 1 Weight (30461)": 401,
+      "IF 1 Weight (30463)": 345,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 55,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 50,
+      "RF 2 Amplitude (40754)": 38,
+      "RF 3 Amplitude (40755)": 50,
+      "RF 4 Amplitude (40756)": 50,
+      "RF 5 Amplitude (40757)": 50,
+      "RF 6 Amplitude (40758)": 50,
+      "RF 7 Amplitude (40759)": 50,
+      "RF 8 Amplitude (40760)": 50,
+      "RF 9 Amplitude (40761)": 50,
+      "DF 1 Weight (Constant) (41981)": 300,
+      "IF 1 Weight (Constant) (41984)": 350,
+      "RF 1 Zeros (30332)_zeros_count": 321,
+      "RF 2 Zeros (30334)_zeros_count": 289,
+      "RF 3 Zeros (30336)_zeros_count": 268,
+      "RF 4 Zeros (30338)_zeros_count": 523,
+      "RF 5 Zeros (30340)_zeros_count": 328,
+      "RF 6 Zeros (30342)_zeros_count": 515,
+      "RF 7 Zeros (30344)_zeros_count": 317,
+      "RF 8 Zeros (30346)_zeros_count": 488,
+      "RF 9 Zeros (30348)_zeros_count": 305,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.2
+    },
+    "created_at": "2026-01-07T17:43:10.421709"
+  },
+  {
+    "id": 296,
+    "file_source": "feed_back_2025-11-22.csv",
+    "row_number": 211,
+    "unix_timestamp": "2025-11-22T05:45:00",
+    "topic": "weigher3_c1",
+    "variant": "Flat Cut",
+    "target_weight": 45.9,
+    "actual_weight": 30.5,
+    "actual_speed": 44.0,
+    "target_speed": 40.0,
+    "actual_count": 665.0,
+    "rf1_amplitude": 61.0,
+    "rf2_amplitude": 61.0,
+    "rf3_amplitude": 61.0,
+    "rf4_amplitude": 61.0,
+    "rf5_amplitude": 61.0,
+    "rf6_amplitude": 61.0,
+    "rf7_amplitude": 61.0,
+    "rf8_amplitude": 61.0,
+    "rf9_amplitude": 61.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 32,
+    "rf2_zeros_count": 27,
+    "rf3_zeros_count": 61,
+    "rf4_zeros_count": 15,
+    "rf5_zeros_count": 26,
+    "rf6_zeros_count": 19,
+    "rf7_zeros_count": 44,
+    "rf8_zeros_count": 23,
+    "rf9_zeros_count": 53,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": -0.07,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher3_c1",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 9004,
+      "IF_Flow_In": 17149,
+      "DF_Flow_Out": 9029,
+      "IF_Flow_Out": 17155,
+      "RF 1 Weight": 8.6,
+      "RF 1 Worked": 270,
+      "RF 2 Weight": 13.6,
+      "RF 2 Worked": 253,
+      "RF 3 Weight": 10.1,
+      "RF 3 Worked": 267,
+      "RF 4 Weight": 8.1,
+      "RF 4 Worked": 274,
+      "RF 5 Weight": 8.4,
+      "RF 5 Worked": 267,
+      "RF 6 Weight": 7.5,
+      "RF 6 Worked": 273,
+      "RF 7 Weight": 8.1,
+      "RF 7 Worked": 282,
+      "RF 8 Weight": 9.7,
+      "RF 8 Worked": 292,
+      "RF 9 Weight": 11.5,
+      "RF 9 Worked": 279,
+      "Speed Ratio": 1.1,
+      "Actual Count": 665,
+      "Actual Speed": 44,
+      "proper_count": 665,
+      "target_Speed": 40,
+      "Actual Weight": 30.5,
+      "Unix_Timestamp": "11/22/2025 5:45",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 30,
+      "RF 2 Time (40788)": 30,
+      "RF 3 Time (40789)": 30,
+      "RF 4 Time (40790)": 30,
+      "RF 5 Time (40791)": 30,
+      "RF 6 Time (40792)": 30,
+      "RF 7 Time (40793)": 30,
+      "RF 8 Time (40794)": 30,
+      "RF 9 Time (40795)": 30,
+      "DF 1 Weight (30461)": 440,
+      "IF 1 Weight (30463)": 636,
+      "Target Weight (41977)": 45.9,
+      "DF 1 Amplitude (40665)": 60,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 61,
+      "RF 2 Amplitude (40754)": 61,
+      "RF 3 Amplitude (40755)": 61,
+      "RF 4 Amplitude (40756)": 61,
+      "RF 5 Amplitude (40757)": 61,
+      "RF 6 Amplitude (40758)": 61,
+      "RF 7 Amplitude (40759)": 61,
+      "RF 8 Amplitude (40760)": 61,
+      "RF 9 Amplitude (40761)": 61,
+      "DF 1 Weight (Constant) (41981)": 400,
+      "IF 1 Weight (Constant) (41984)": 500,
+      "RF 1 Zeros (30332)_zeros_count": 32,
+      "RF 2 Zeros (30334)_zeros_count": 27,
+      "RF 3 Zeros (30336)_zeros_count": 61,
+      "RF 4 Zeros (30338)_zeros_count": 15,
+      "RF 5 Zeros (30340)_zeros_count": 26,
+      "RF 6 Zeros (30342)_zeros_count": 19,
+      "RF 7 Zeros (30344)_zeros_count": 44,
+      "RF 8 Zeros (30346)_zeros_count": 23,
+      "RF 9 Zeros (30348)_zeros_count": 53,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 45.9
+    },
+    "created_at": "2026-01-07T17:43:10.756342"
+  },
+  {
+    "id": 297,
+    "file_source": "feed_back_2025-11-22.csv",
+    "row_number": 212,
+    "unix_timestamp": "2025-11-22T05:45:00",
+    "topic": "weigher4_c2",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 24.4,
+    "actual_speed": 76.0,
+    "target_speed": 80.0,
+    "actual_count": 1140.0,
+    "rf1_amplitude": 52.0,
+    "rf2_amplitude": 52.0,
+    "rf3_amplitude": 52.0,
+    "rf4_amplitude": 52.0,
+    "rf5_amplitude": 52.0,
+    "rf6_amplitude": 52.0,
+    "rf7_amplitude": 52.0,
+    "rf8_amplitude": 52.0,
+    "rf9_amplitude": 52.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 355,
+    "rf2_zeros_count": 347,
+    "rf3_zeros_count": 356,
+    "rf4_zeros_count": 393,
+    "rf5_zeros_count": 333,
+    "rf6_zeros_count": 418,
+    "rf7_zeros_count": 415,
+    "rf8_zeros_count": 377,
+    "rf9_zeros_count": 419,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.0,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher4_c2",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 7715,
+      "IF_Flow_In": 13929,
+      "DF_Flow_Out": 7624,
+      "IF_Flow_Out": 13969,
+      "RF 1 Weight": 5.3,
+      "RF 1 Worked": 155,
+      "RF 2 Weight": 7.6,
+      "RF 2 Worked": 155,
+      "RF 3 Weight": 7.0,
+      "RF 3 Worked": 155,
+      "RF 4 Weight": 4.5,
+      "RF 4 Worked": 170,
+      "RF 5 Weight": 6.4,
+      "RF 5 Worked": 163,
+      "RF 6 Weight": 5.3,
+      "RF 6 Worked": 159,
+      "RF 7 Weight": 5.8,
+      "RF 7 Worked": 155,
+      "RF 8 Weight": 6.2,
+      "RF 8 Worked": 166,
+      "RF 9 Weight": 6.2,
+      "RF 9 Worked": 163,
+      "Speed Ratio": 0.95,
+      "Actual Count": 1140,
+      "Actual Speed": 76,
+      "proper_count": 1140,
+      "target_Speed": 80,
+      "Actual Weight": 24.4,
+      "Unix_Timestamp": "11/22/2025 5:45",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 27,
+      "RF 2 Time (40788)": 27,
+      "RF 3 Time (40789)": 27,
+      "RF 4 Time (40790)": 27,
+      "RF 5 Time (40791)": 27,
+      "RF 6 Time (40792)": 27,
+      "RF 7 Time (40793)": 27,
+      "RF 8 Time (40794)": 28,
+      "RF 9 Time (40795)": 28,
+      "DF 1 Weight (30461)": 452,
+      "IF 1 Weight (30463)": 352,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 60,
+      "IF 1 Amplitude (40666)": 50,
+      "RF 1 Amplitude (40753)": 52,
+      "RF 2 Amplitude (40754)": 52,
+      "RF 3 Amplitude (40755)": 52,
+      "RF 4 Amplitude (40756)": 52,
+      "RF 5 Amplitude (40757)": 52,
+      "RF 6 Amplitude (40758)": 52,
+      "RF 7 Amplitude (40759)": 52,
+      "RF 8 Amplitude (40760)": 52,
+      "RF 9 Amplitude (40761)": 52,
+      "DF 1 Weight (Constant) (41981)": 350,
+      "IF 1 Weight (Constant) (41984)": 400,
+      "RF 1 Zeros (30332)_zeros_count": 355,
+      "RF 2 Zeros (30334)_zeros_count": 347,
+      "RF 3 Zeros (30336)_zeros_count": 356,
+      "RF 4 Zeros (30338)_zeros_count": 393,
+      "RF 5 Zeros (30340)_zeros_count": 333,
+      "RF 6 Zeros (30342)_zeros_count": 418,
+      "RF 7 Zeros (30344)_zeros_count": 415,
+      "RF 8 Zeros (30346)_zeros_count": 377,
+      "RF 9 Zeros (30348)_zeros_count": 419,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.4
+    },
+    "created_at": "2026-01-07T17:43:10.756342"
+  },
+  {
+    "id": 298,
+    "file_source": "feed_back_2025-11-22.csv",
+    "row_number": 213,
+    "unix_timestamp": "2025-11-22T05:45:00",
+    "topic": "weigher5_c1",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 23.1,
+    "actual_speed": 72.0,
+    "target_speed": 80.0,
+    "actual_count": 1079.0,
+    "rf1_amplitude": 50.0,
+    "rf2_amplitude": 46.0,
+    "rf3_amplitude": 46.0,
+    "rf4_amplitude": 46.0,
+    "rf5_amplitude": 47.0,
+    "rf6_amplitude": 47.0,
+    "rf7_amplitude": 48.0,
+    "rf8_amplitude": 47.0,
+    "rf9_amplitude": 49.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 321,
+    "rf2_zeros_count": 370,
+    "rf3_zeros_count": 368,
+    "rf4_zeros_count": 320,
+    "rf5_zeros_count": 401,
+    "rf6_zeros_count": 297,
+    "rf7_zeros_count": 440,
+    "rf8_zeros_count": 402,
+    "rf9_zeros_count": 374,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.04,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher5_c1",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 7791,
+      "IF_Flow_In": 13309,
+      "DF_Flow_Out": 7731,
+      "IF_Flow_Out": 13455,
+      "RF 1 Weight": 6.7,
+      "RF 1 Worked": 219,
+      "RF 2 Weight": 6.9,
+      "RF 2 Worked": 222,
+      "RF 3 Weight": 6.4,
+      "RF 3 Worked": 214,
+      "RF 4 Weight": 6.4,
+      "RF 4 Worked": 212,
+      "RF 5 Weight": 6.4,
+      "RF 5 Worked": 214,
+      "RF 6 Weight": 5.8,
+      "RF 6 Worked": 214,
+      "RF 7 Weight": 5.9,
+      "RF 7 Worked": 195,
+      "RF 8 Weight": 6.3,
+      "RF 8 Worked": 211,
+      "RF 9 Weight": 6.9,
+      "RF 9 Worked": 214,
+      "Speed Ratio": 0.9,
+      "Actual Count": 1079,
+      "Actual Speed": 72,
+      "proper_count": 1079,
+      "target_Speed": 80,
+      "Actual Weight": 23.1,
+      "Unix_Timestamp": "11/22/2025 5:45",
+      "DF 1 Time (40675)": 25,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 22,
+      "RF 2 Time (40788)": 26,
+      "RF 3 Time (40789)": 26,
+      "RF 4 Time (40790)": 26,
+      "RF 5 Time (40791)": 26,
+      "RF 6 Time (40792)": 26,
+      "RF 7 Time (40793)": 25,
+      "RF 8 Time (40794)": 25,
+      "RF 9 Time (40795)": 23,
+      "DF 1 Weight (30461)": 226,
+      "IF 1 Weight (30463)": 228,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 55,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 50,
+      "RF 2 Amplitude (40754)": 46,
+      "RF 3 Amplitude (40755)": 46,
+      "RF 4 Amplitude (40756)": 46,
+      "RF 5 Amplitude (40757)": 47,
+      "RF 6 Amplitude (40758)": 47,
+      "RF 7 Amplitude (40759)": 48,
+      "RF 8 Amplitude (40760)": 47,
+      "RF 9 Amplitude (40761)": 49,
+      "DF 1 Weight (Constant) (41981)": 170,
+      "IF 1 Weight (Constant) (41984)": 350,
+      "RF 1 Zeros (30332)_zeros_count": 321,
+      "RF 2 Zeros (30334)_zeros_count": 370,
+      "RF 3 Zeros (30336)_zeros_count": 368,
+      "RF 4 Zeros (30338)_zeros_count": 320,
+      "RF 5 Zeros (30340)_zeros_count": 401,
+      "RF 6 Zeros (30342)_zeros_count": 297,
+      "RF 7 Zeros (30344)_zeros_count": 440,
+      "RF 8 Zeros (30346)_zeros_count": 402,
+      "RF 9 Zeros (30348)_zeros_count": 374,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.4
+    },
+    "created_at": "2026-01-07T17:43:10.756342"
+  },
+  {
+    "id": 20,
+    "file_source": "feed_back_2025-11-22-original (2).csv",
+    "row_number": 21,
+    "unix_timestamp": "2025-11-22T09:30:00",
+    "topic": "weigher14_c1",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 20.0,
+    "actual_speed": 62.0,
+    "target_speed": 80.0,
+    "actual_count": 930.0,
+    "rf1_amplitude": 50.0,
+    "rf2_amplitude": 38.0,
+    "rf3_amplitude": 50.0,
+    "rf4_amplitude": 50.0,
+    "rf5_amplitude": 50.0,
+    "rf6_amplitude": 50.0,
+    "rf7_amplitude": 50.0,
+    "rf8_amplitude": 50.0,
+    "rf9_amplitude": 50.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 321,
+    "rf2_zeros_count": 289,
+    "rf3_zeros_count": 268,
+    "rf4_zeros_count": 523,
+    "rf5_zeros_count": 328,
+    "rf6_zeros_count": 515,
+    "rf7_zeros_count": 317,
+    "rf8_zeros_count": 488,
+    "rf9_zeros_count": 305,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": 0.5,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher14_c1",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 3.0,
+      "DF_Flow_In": 8141,
+      "IF_Flow_In": 14274,
+      "DF_Flow_Out": 8050,
+      "IF_Flow_Out": 14426,
+      "RF 1 Weight": 5.9,
+      "RF 1 Worked": 175,
+      "RF 2 Weight": 5.5,
+      "RF 2 Worked": 189,
+      "RF 3 Weight": 5.4,
+      "RF 3 Worked": 196,
+      "RF 4 Weight": 4.7,
+      "RF 4 Worked": 178,
+      "RF 5 Weight": 5.0,
+      "RF 5 Worked": 176,
+      "RF 6 Weight": 4.5,
+      "RF 6 Worked": 180,
+      "RF 7 Weight": 6.2,
+      "RF 7 Worked": 185,
+      "RF 8 Weight": 5.5,
+      "RF 8 Worked": 188,
+      "RF 9 Weight": 5.1,
+      "RF 9 Worked": 181,
+      "Speed Ratio": 0.775,
+      "Actual Count": 930,
+      "Actual Speed": 62,
+      "proper_count": 930,
+      "target_Speed": 80,
+      "Actual Weight": 20.0,
+      "Unix_Timestamp": "11/22/25 9:30",
+      "DF 1 Time (40675)": 25,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 25,
+      "RF 2 Time (40788)": 25,
+      "RF 3 Time (40789)": 25,
+      "RF 4 Time (40790)": 25,
+      "RF 5 Time (40791)": 25,
+      "RF 6 Time (40792)": 25,
+      "RF 7 Time (40793)": 25,
+      "RF 8 Time (40794)": 25,
+      "RF 9 Time (40795)": 25,
+      "DF 1 Weight (30461)": 401,
+      "IF 1 Weight (30463)": 345,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 55,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 50,
+      "RF 2 Amplitude (40754)": 38,
+      "RF 3 Amplitude (40755)": 50,
+      "RF 4 Amplitude (40756)": 50,
+      "RF 5 Amplitude (40757)": 50,
+      "RF 6 Amplitude (40758)": 50,
+      "RF 7 Amplitude (40759)": 50,
+      "RF 8 Amplitude (40760)": 50,
+      "RF 9 Amplitude (40761)": 50,
+      "DF 1 Weight (Constant) (41981)": 300,
+      "IF 1 Weight (Constant) (41984)": 350,
+      "RF 1 Zeros (30332)_zeros_count": 321,
+      "RF 2 Zeros (30334)_zeros_count": 289,
+      "RF 3 Zeros (30336)_zeros_count": 268,
+      "RF 4 Zeros (30338)_zeros_count": 523,
+      "RF 5 Zeros (30340)_zeros_count": 328,
+      "RF 6 Zeros (30342)_zeros_count": 515,
+      "RF 7 Zeros (30344)_zeros_count": 317,
+      "RF 8 Zeros (30346)_zeros_count": 488,
+      "RF 9 Zeros (30348)_zeros_count": 305,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.2
+    },
+    "created_at": "2026-01-07T17:43:10.421709"
+  },
+  {
+    "id": 299,
+    "file_source": "feed_back_2025-11-22.csv",
+    "row_number": 214,
+    "unix_timestamp": "2025-11-22T05:45:00",
+    "topic": "weigher6_c2",
+    "variant": "Flat Cut",
+    "target_weight": 21.4,
+    "actual_weight": 25.4,
+    "actual_speed": 79.0,
+    "target_speed": 80.0,
+    "actual_count": 1188.0,
+    "rf1_amplitude": 46.0,
+    "rf2_amplitude": 46.0,
+    "rf3_amplitude": 46.0,
+    "rf4_amplitude": 46.0,
+    "rf5_amplitude": 46.0,
+    "rf6_amplitude": 46.0,
+    "rf7_amplitude": 46.0,
+    "rf8_amplitude": 46.0,
+    "rf9_amplitude": 46.0,
+    "rf1_weight_avg": null,
+    "rf2_weight_avg": null,
+    "rf3_weight_avg": null,
+    "rf4_weight_avg": null,
+    "rf5_weight_avg": null,
+    "rf6_weight_avg": null,
+    "rf7_weight_avg": null,
+    "rf8_weight_avg": null,
+    "rf9_weight_avg": null,
+    "rf1_zeros_count": 332,
+    "rf2_zeros_count": 185,
+    "rf3_zeros_count": 299,
+    "rf4_zeros_count": 324,
+    "rf5_zeros_count": 354,
+    "rf6_zeros_count": 338,
+    "rf7_zeros_count": 398,
+    "rf8_zeros_count": 312,
+    "rf9_zeros_count": 295,
+    "rf1_worked_count": null,
+    "rf2_worked_count": null,
+    "rf3_worked_count": null,
+    "rf4_worked_count": null,
+    "rf5_worked_count": null,
+    "rf6_worked_count": null,
+    "rf7_worked_count": null,
+    "rf8_worked_count": null,
+    "rf9_worked_count": null,
+    "alert": "EGA within threshold.",
+    "operator_feedback": "-",
+    "raw_data": {
+      "ega": -0.08,
+      "Alert": "EGA within threshold.",
+      "Color": null,
+      "Topic": "weigher6_c2",
+      "Variant": "Flat Cut",
+      "Color_ega": null,
+      "ega_limit": 0.1,
+      "DF_Flow_In": 10518,
+      "IF_Flow_In": 16663,
+      "DF_Flow_Out": 10559,
+      "IF_Flow_Out": 16806,
+      "RF 1 Weight": 5.7,
+      "RF 1 Worked": 234,
+      "RF 2 Weight": 10.4,
+      "RF 2 Worked": 200,
+      "RF 3 Weight": 9.8,
+      "RF 3 Worked": 214,
+      "RF 4 Weight": 7.5,
+      "RF 4 Worked": 216,
+      "RF 5 Weight": 7.8,
+      "RF 5 Worked": 219,
+      "RF 6 Weight": 6.8,
+      "RF 6 Worked": 221,
+      "RF 7 Weight": 5.9,
+      "RF 7 Worked": 225,
+      "RF 8 Weight": 5.7,
+      "RF 8 Worked": 251,
+      "RF 9 Weight": 8.6,
+      "RF 9 Worked": 263,
+      "Speed Ratio": 0.9875,
+      "Actual Count": 1188,
+      "Actual Speed": 79,
+      "proper_count": 1188,
+      "target_Speed": 80,
+      "Actual Weight": 25.4,
+      "Unix_Timestamp": "11/22/2025 5:45",
+      "DF 1 Time (40675)": 30,
+      "Operator Feedback": "-",
+      "RF 1 Time (40787)": 23,
+      "RF 2 Time (40788)": 23,
+      "RF 3 Time (40789)": 23,
+      "RF 4 Time (40790)": 23,
+      "RF 5 Time (40791)": 23,
+      "RF 6 Time (40792)": 23,
+      "RF 7 Time (40793)": 23,
+      "RF 8 Time (40794)": 23,
+      "RF 9 Time (40795)": 23,
+      "DF 1 Weight (30461)": 332,
+      "IF 1 Weight (30463)": 301,
+      "Target Weight (41977)": 21.4,
+      "DF 1 Amplitude (40665)": 60,
+      "IF 1 Amplitude (40666)": 60,
+      "RF 1 Amplitude (40753)": 46,
+      "RF 2 Amplitude (40754)": 46,
+      "RF 3 Amplitude (40755)": 46,
+      "RF 4 Amplitude (40756)": 46,
+      "RF 5 Amplitude (40757)": 46,
+      "RF 6 Amplitude (40758)": 46,
+      "RF 7 Amplitude (40759)": 46,
+      "RF 8 Amplitude (40760)": 46,
+      "RF 9 Amplitude (40761)": 46,
+      "DF 1 Weight (Constant) (41981)": 300,
+      "IF 1 Weight (Constant) (41984)": 400,
+      "RF 1 Zeros (30332)_zeros_count": 332,
+      "RF 2 Zeros (30334)_zeros_count": 185,
+      "RF 3 Zeros (30336)_zeros_count": 299,
+      "RF 4 Zeros (30338)_zeros_count": 324,
+      "RF 5 Zeros (30340)_zeros_count": 354,
+      "RF 6 Zeros (30342)_zeros_count": 338,
+      "RF 7 Zeros (30344)_zeros_count": 398,
+      "RF 8 Zeros (30346)_zeros_count": 312,
+      "RF 9 Zeros (30348)_zeros_count": 295,
+      "C1 (Each Pack Grammage Vlaue) (30183)": 21.3
+    },
+    "created_at": "2026-01-07T17:43:10.756342"
+  }
+]
+
+=========================================
+📋 Table 7/18: feeder_metadata
+=========================================
+Columns:
+  - meta_id (integer)
+  - feeder_id (integer)
+  - manufacturer (character varying)
+  - install_date (date)
+  - last_maintenance (date)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "meta_id": 1,
+    "feeder_id": 1,
+    "manufacturer": "FeedTech Inc",
+    "install_date": "2020-01-15",
+    "last_maintenance": "2025-12-01"
+  },
+  {
+    "meta_id": 2,
+    "feeder_id": 2,
+    "manufacturer": "AutoFeeder Co",
+    "install_date": "2021-03-20",
+    "last_maintenance": "2025-11-28"
+  },
+  {
+    "meta_id": 3,
+    "feeder_id": 3,
+    "manufacturer": "PrecisionFeed",
+    "install_date": "2019-11-10",
+    "last_maintenance": "2025-12-10"
+  },
+  {
+    "meta_id": 4,
+    "feeder_id": 1,
+    "manufacturer": "FeedTech Inc",
+    "install_date": "2020-01-15",
+    "last_maintenance": "2025-12-01"
+  },
+  {
+    "meta_id": 5,
+    "feeder_id": 2,
+    "manufacturer": "AutoFeeder Co",
+    "install_date": "2021-03-20",
+    "last_maintenance": "2025-11-28"
+  },
+  {
+    "meta_id": 6,
+    "feeder_id": 3,
+    "manufacturer": "PrecisionFeed",
+    "install_date": "2019-11-10",
+    "last_maintenance": "2025-12-10"
+  },
+  {
+    "meta_id": 7,
+    "feeder_id": 1,
+    "manufacturer": "FeedTech Inc",
+    "install_date": "2020-01-15",
+    "last_maintenance": "2025-12-01"
+  },
+  {
+    "meta_id": 8,
+    "feeder_id": 2,
+    "manufacturer": "AutoFeeder Co",
+    "install_date": "2021-03-20",
+    "last_maintenance": "2025-11-28"
+  },
+  {
+    "meta_id": 9,
+    "feeder_id": 3,
+    "manufacturer": "PrecisionFeed",
+    "install_date": "2019-11-10",
+    "last_maintenance": "2025-12-10"
+  },
+  {
+    "meta_id": 10,
+    "feeder_id": 1,
+    "manufacturer": "FeedTech Inc",
+    "install_date": "2020-01-15",
+    "last_maintenance": "2025-12-01"
+  }
+]
+
+=========================================
+📋 Table 8/18: feeder_stats_line_1_jan
+=========================================
+Columns:
+  - stat_id (integer)
+  - date_recorded (date)
+  - feeder_number (integer)
+  - amplitude_avg (numeric)
+  - weight_avg (numeric)
+  - cycles_completed (integer)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "stat_id": 1,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 1,
+    "amplitude_avg": 1.0,
+    "weight_avg": 1.0,
+    "cycles_completed": 1
+  },
+  {
+    "stat_id": 2,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 2,
+    "amplitude_avg": 2.0,
+    "weight_avg": 2.0,
+    "cycles_completed": 2
+  },
+  {
+    "stat_id": 3,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 3,
+    "amplitude_avg": 3.0,
+    "weight_avg": 3.0,
+    "cycles_completed": 3
+  },
+  {
+    "stat_id": 4,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 4,
+    "amplitude_avg": 4.0,
+    "weight_avg": 4.0,
+    "cycles_completed": 4
+  },
+  {
+    "stat_id": 5,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 5,
+    "amplitude_avg": 5.0,
+    "weight_avg": 5.0,
+    "cycles_completed": 5
+  },
+  {
+    "stat_id": 6,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 6,
+    "amplitude_avg": 6.0,
+    "weight_avg": 6.0,
+    "cycles_completed": 6
+  },
+  {
+    "stat_id": 7,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 7,
+    "amplitude_avg": 7.0,
+    "weight_avg": 7.0,
+    "cycles_completed": 7
+  },
+  {
+    "stat_id": 8,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 8,
+    "amplitude_avg": 8.0,
+    "weight_avg": 8.0,
+    "cycles_completed": 8
+  },
+  {
+    "stat_id": 9,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 9,
+    "amplitude_avg": 9.0,
+    "weight_avg": 9.0,
+    "cycles_completed": 9
+  },
+  {
+    "stat_id": 10,
+    "date_recorded": "2026-05-25",
+    "feeder_number": 10,
+    "amplitude_avg": 10.0,
+    "weight_avg": 10.0,
+    "cycles_completed": 10
+  }
+]
+
+=========================================
+📋 Table 9/18: golden_settings
+=========================================
+Columns:
+  - id (integer)
+  - topic (character varying)
+  - target_weight (double precision)
+  - variant (character varying)
+  - rf1_amplitude (double precision)
+  - rf2_amplitude (double precision)
+  - rf3_amplitude (double precision)
+  - rf4_amplitude (double precision)
+  - rf5_amplitude (double precision)
+  - rf6_amplitude (double precision)
+  - rf7_amplitude (double precision)
+  - rf8_amplitude (double precision)
+  - rf9_amplitude (double precision)
+  - mean_active_rf (double precision)
+  - min_active_rf (double precision)
+  - max_active_rf (double precision)
+  - raw_data (jsonb)
+  - created_at (timestamp without time zone)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "id": 13,
+    "topic": "weigher13_c1",
+    "target_weight": 100.0,
+    "variant": "Flat Cut",
+    "rf1_amplitude": 450.5,
+    "rf2_amplitude": 455.2,
+    "rf3_amplitude": 448.9,
+    "rf4_amplitude": 452.1,
+    "rf5_amplitude": 449.7,
+    "rf6_amplitude": 451.3,
+    "rf7_amplitude": 453.8,
+    "rf8_amplitude": 450.2,
+    "rf9_amplitude": 454.6,
+    "mean_active_rf": 451.81111111111113,
+    "min_active_rf": 448.9,
+    "max_active_rf": 455.2,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.687543"
+  },
+  {
+    "id": 14,
+    "topic": "weigher13_c2",
+    "target_weight": 110.0,
+    "variant": "Round Cut",
+    "rf1_amplitude": 451.0,
+    "rf2_amplitude": 455.7,
+    "rf3_amplitude": 449.4,
+    "rf4_amplitude": 452.6,
+    "rf5_amplitude": 450.2,
+    "rf6_amplitude": 451.8,
+    "rf7_amplitude": 454.3,
+    "rf8_amplitude": 450.7,
+    "rf9_amplitude": 455.1,
+    "mean_active_rf": 452.31111111111113,
+    "min_active_rf": 449.4,
+    "max_active_rf": 455.7,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.693111"
+  },
+  {
+    "id": 15,
+    "topic": "weigher13_c3",
+    "target_weight": 120.0,
+    "variant": "Candy X",
+    "rf1_amplitude": 451.5,
+    "rf2_amplitude": 456.2,
+    "rf3_amplitude": 449.9,
+    "rf4_amplitude": 453.1,
+    "rf5_amplitude": 450.7,
+    "rf6_amplitude": 452.3,
+    "rf7_amplitude": 454.8,
+    "rf8_amplitude": 451.2,
+    "rf9_amplitude": 455.6,
+    "mean_active_rf": 452.81111111111113,
+    "min_active_rf": 449.9,
+    "max_active_rf": 456.2,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.694287"
+  },
+  {
+    "id": 16,
+    "topic": "weigher13_c4",
+    "target_weight": 130.0,
+    "variant": "Chocolate Gold",
+    "rf1_amplitude": 452.0,
+    "rf2_amplitude": 456.7,
+    "rf3_amplitude": 450.4,
+    "rf4_amplitude": 453.6,
+    "rf5_amplitude": 451.2,
+    "rf6_amplitude": 452.8,
+    "rf7_amplitude": 455.3,
+    "rf8_amplitude": 451.7,
+    "rf9_amplitude": 456.1,
+    "mean_active_rf": 453.31111111111113,
+    "min_active_rf": 450.4,
+    "max_active_rf": 456.7,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.695066"
+  },
+  {
+    "id": 17,
+    "topic": "weigher13_c5",
+    "target_weight": 140.0,
+    "variant": "Classic Salted",
+    "rf1_amplitude": 452.5,
+    "rf2_amplitude": 457.2,
+    "rf3_amplitude": 450.9,
+    "rf4_amplitude": 454.1,
+    "rf5_amplitude": 451.7,
+    "rf6_amplitude": 453.3,
+    "rf7_amplitude": 455.8,
+    "rf8_amplitude": 452.2,
+    "rf9_amplitude": 456.6,
+    "mean_active_rf": 453.81111111111113,
+    "min_active_rf": 450.9,
+    "max_active_rf": 457.2,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.696185"
+  },
+  {
+    "id": 18,
+    "topic": "weigher13_c6",
+    "target_weight": 150.0,
+    "variant": "Spicy Chili",
+    "rf1_amplitude": 453.0,
+    "rf2_amplitude": 457.7,
+    "rf3_amplitude": 451.4,
+    "rf4_amplitude": 454.6,
+    "rf5_amplitude": 452.2,
+    "rf6_amplitude": 453.8,
+    "rf7_amplitude": 456.3,
+    "rf8_amplitude": 452.7,
+    "rf9_amplitude": 457.1,
+    "mean_active_rf": 454.31111111111113,
+    "min_active_rf": 451.4,
+    "max_active_rf": 457.7,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.696950"
+  },
+  {
+    "id": 19,
+    "topic": "weigher13_c7",
+    "target_weight": 160.0,
+    "variant": "Sour Cream",
+    "rf1_amplitude": 453.5,
+    "rf2_amplitude": 458.2,
+    "rf3_amplitude": 451.9,
+    "rf4_amplitude": 455.1,
+    "rf5_amplitude": 452.7,
+    "rf6_amplitude": 454.3,
+    "rf7_amplitude": 456.8,
+    "rf8_amplitude": 453.2,
+    "rf9_amplitude": 457.6,
+    "mean_active_rf": 454.81111111111113,
+    "min_active_rf": 451.9,
+    "max_active_rf": 458.2,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.697684"
+  },
+  {
+    "id": 20,
+    "topic": "weigher13_c8",
+    "target_weight": 170.0,
+    "variant": "Cheese Onion",
+    "rf1_amplitude": 454.0,
+    "rf2_amplitude": 458.7,
+    "rf3_amplitude": 452.4,
+    "rf4_amplitude": 455.6,
+    "rf5_amplitude": 453.2,
+    "rf6_amplitude": 454.8,
+    "rf7_amplitude": 457.3,
+    "rf8_amplitude": 453.7,
+    "rf9_amplitude": 458.1,
+    "mean_active_rf": 455.31111111111113,
+    "min_active_rf": 452.4,
+    "max_active_rf": 458.7,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.698406"
+  },
+  {
+    "id": 21,
+    "topic": "weigher13_c9",
+    "target_weight": 180.0,
+    "variant": "Barbecue",
+    "rf1_amplitude": 454.5,
+    "rf2_amplitude": 459.2,
+    "rf3_amplitude": 452.9,
+    "rf4_amplitude": 456.1,
+    "rf5_amplitude": 453.7,
+    "rf6_amplitude": 455.3,
+    "rf7_amplitude": 457.8,
+    "rf8_amplitude": 454.2,
+    "rf9_amplitude": 458.6,
+    "mean_active_rf": 455.81111111111113,
+    "min_active_rf": 452.9,
+    "max_active_rf": 459.2,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.699275"
+  },
+  {
+    "id": 22,
+    "topic": "weigher13_c10",
+    "target_weight": 190.0,
+    "variant": "Sweet Tomato",
+    "rf1_amplitude": 455.0,
+    "rf2_amplitude": 459.7,
+    "rf3_amplitude": 453.4,
+    "rf4_amplitude": 456.6,
+    "rf5_amplitude": 454.2,
+    "rf6_amplitude": 455.8,
+    "rf7_amplitude": 458.3,
+    "rf8_amplitude": 454.7,
+    "rf9_amplitude": 459.1,
+    "mean_active_rf": 456.31111111111113,
+    "min_active_rf": 453.4,
+    "max_active_rf": 459.7,
+    "raw_data": null,
+    "created_at": "2026-05-25T21:12:54.699970"
+  }
+]
+
+=========================================
+📋 Table 10/18: live_weight_logs_candy_x
+=========================================
+Columns:
+  - log_id (integer)
+  - timestamp (timestamp without time zone)
+  - batch_code (character varying)
+  - target_weight (numeric)
+  - actual_weight (numeric)
+  - variance (numeric)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "log_id": 1,
+    "timestamp": "2026-01-10T23:15:07.504955",
+    "batch_code": "BATCH_1",
+    "target_weight": 21.4,
+    "actual_weight": 21.97,
+    "variance": 1.89
+  },
+  {
+    "log_id": 2,
+    "timestamp": "2026-01-10T22:15:07.504955",
+    "batch_code": "BATCH_2",
+    "target_weight": 21.4,
+    "actual_weight": 21.99,
+    "variance": 1.72
+  },
+  {
+    "log_id": 3,
+    "timestamp": "2026-01-10T21:15:07.504955",
+    "batch_code": "BATCH_3",
+    "target_weight": 21.4,
+    "actual_weight": 21.4,
+    "variance": 0.11
+  },
+  {
+    "log_id": 4,
+    "timestamp": "2026-01-10T20:15:07.504955",
+    "batch_code": "BATCH_4",
+    "target_weight": 21.4,
+    "actual_weight": 22.16,
+    "variance": 1.86
+  },
+  {
+    "log_id": 5,
+    "timestamp": "2026-01-10T19:15:07.504955",
+    "batch_code": "BATCH_5",
+    "target_weight": 21.4,
+    "actual_weight": 21.29,
+    "variance": 0.62
+  },
+  {
+    "log_id": 6,
+    "timestamp": "2026-01-10T18:15:07.504955",
+    "batch_code": "BATCH_6",
+    "target_weight": 21.4,
+    "actual_weight": 22.78,
+    "variance": 0.85
+  },
+  {
+    "log_id": 7,
+    "timestamp": "2026-01-10T17:15:07.504955",
+    "batch_code": "BATCH_7",
+    "target_weight": 21.4,
+    "actual_weight": 22.45,
+    "variance": 1.07
+  },
+  {
+    "log_id": 8,
+    "timestamp": "2026-01-10T16:15:07.504955",
+    "batch_code": "BATCH_8",
+    "target_weight": 21.4,
+    "actual_weight": 20.96,
+    "variance": 0.36
+  },
+  {
+    "log_id": 9,
+    "timestamp": "2026-01-10T15:15:07.504955",
+    "batch_code": "BATCH_9",
+    "target_weight": 21.4,
+    "actual_weight": 20.39,
+    "variance": 1.82
+  },
+  {
+    "log_id": 10,
+    "timestamp": "2026-01-10T14:15:07.504955",
+    "batch_code": "BATCH_10",
+    "target_weight": 21.4,
+    "actual_weight": 20.95,
+    "variance": 0.4
+  }
+]
+
+=========================================
+📋 Table 11/18: oee_details_data
+=========================================
+Columns:
+  - id (integer)
+  - machine_id (character varying)
+  - loop_id (character varying)
+  - grammage (character varying)
+  - variant (character varying)
+  - availability (double precision)
+  - performance (double precision)
+  - quality (double precision)
+  - oee (double precision)
+  - timestamp (timestamp without time zone)
+  - created_at (timestamp without time zone)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "id": 1,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "availability": 95.0,
+    "performance": 92.0,
+    "quality": 99.0,
+    "oee": 86.5,
+    "timestamp": "2026-05-20T08:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 2,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "availability": 94.0,
+    "performance": 91.0,
+    "quality": 98.5,
+    "oee": 84.2,
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 3,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "availability": 96.0,
+    "performance": 93.0,
+    "quality": 99.2,
+    "oee": 88.6,
+    "timestamp": "2026-05-20T10:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 4,
+    "machine_id": "M02",
+    "loop_id": "L02",
+    "grammage": "250g",
+    "variant": "Round Cut",
+    "availability": 92.0,
+    "performance": 89.0,
+    "quality": 97.5,
+    "oee": 79.8,
+    "timestamp": "2026-05-20T08:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 5,
+    "machine_id": "M02",
+    "loop_id": "L02",
+    "grammage": "250g",
+    "variant": "Round Cut",
+    "availability": 93.0,
+    "performance": 90.0,
+    "quality": 98.0,
+    "oee": 82.0,
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 6,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "200g",
+    "variant": "Round Cut",
+    "availability": 95.0,
+    "performance": 94.0,
+    "quality": 99.0,
+    "oee": 88.4,
+    "timestamp": "2026-05-20T08:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 7,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "availability": 95.0,
+    "performance": 92.0,
+    "quality": 99.0,
+    "oee": 86.5,
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 8,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "availability": 94.0,
+    "performance": 91.0,
+    "quality": 98.5,
+    "oee": 84.2,
+    "timestamp": "2026-05-20T10:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 9,
+    "machine_id": "M01",
+    "loop_id": "L01",
+    "grammage": "100g",
+    "variant": "Flat Cut",
+    "availability": 96.0,
+    "performance": 93.0,
+    "quality": 99.2,
+    "oee": 88.6,
+    "timestamp": "2026-05-20T11:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 10,
+    "machine_id": "M02",
+    "loop_id": "L02",
+    "grammage": "250g",
+    "variant": "Round Cut",
+    "availability": 92.0,
+    "performance": 89.0,
+    "quality": 97.5,
+    "oee": 79.8,
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  }
+]
+
+=========================================
+📋 Table 12/18: operator_certification_levels
+=========================================
+Columns:
+  - cert_id (integer)
+  - operator_name (character varying)
+  - certification (character varying)
+  - level (integer)
+  - issued_date (date)
+  - expiry_date (date)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "cert_id": 1,
+    "operator_name": "John Smith",
+    "certification": "RF Feeder Operation",
+    "level": 3,
+    "issued_date": "2024-01-15",
+    "expiry_date": "2027-01-15"
+  },
+  {
+    "cert_id": 2,
+    "operator_name": "Jane Doe",
+    "certification": "Quality Control",
+    "level": 2,
+    "issued_date": "2024-06-20",
+    "expiry_date": "2026-06-20"
+  },
+  {
+    "cert_id": 3,
+    "operator_name": "John Smith Duplicate",
+    "certification": "RF Feeder Operation",
+    "level": 3,
+    "issued_date": "2024-01-15",
+    "expiry_date": "2027-01-15"
+  },
+  {
+    "cert_id": 4,
+    "operator_name": "Jane Doe Duplicate",
+    "certification": "Quality Control",
+    "level": 2,
+    "issued_date": "2024-06-20",
+    "expiry_date": "2026-06-20"
+  },
+  {
+    "cert_id": 5,
+    "operator_name": "John Smith Duplicate",
+    "certification": "RF Feeder Operation",
+    "level": 3,
+    "issued_date": "2024-01-15",
+    "expiry_date": "2027-01-15"
+  },
+  {
+    "cert_id": 6,
+    "operator_name": "Jane Doe Duplicate",
+    "certification": "Quality Control",
+    "level": 2,
+    "issued_date": "2024-06-20",
+    "expiry_date": "2026-06-20"
+  },
+  {
+    "cert_id": 7,
+    "operator_name": "John Smith Duplicate",
+    "certification": "RF Feeder Operation",
+    "level": 3,
+    "issued_date": "2024-01-15",
+    "expiry_date": "2027-01-15"
+  },
+  {
+    "cert_id": 8,
+    "operator_name": "Jane Doe Duplicate",
+    "certification": "Quality Control",
+    "level": 2,
+    "issued_date": "2024-06-20",
+    "expiry_date": "2026-06-20"
+  },
+  {
+    "cert_id": 9,
+    "operator_name": "John Smith Duplicate",
+    "certification": "RF Feeder Operation",
+    "level": 3,
+    "issued_date": "2024-01-15",
+    "expiry_date": "2027-01-15"
+  },
+  {
+    "cert_id": 10,
+    "operator_name": "Jane Doe Duplicate",
+    "certification": "Quality Control",
+    "level": 2,
+    "issued_date": "2024-06-20",
+    "expiry_date": "2026-06-20"
+  }
+]
+
+=========================================
+📋 Table 13/18: packaging_inventory
+=========================================
+Columns:
+  - item_id (integer)
+  - packaging_type (character varying)
+  - quantity_on_hand (integer)
+  - reorder_level (integer)
+  - last_restock_date (date)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "item_id": 1,
+    "packaging_type": "Plastic Bags 50g",
+    "quantity_on_hand": 50000,
+    "reorder_level": 10000,
+    "last_restock_date": "2025-01-01"
+  },
+  {
+    "item_id": 2,
+    "packaging_type": "Cardboard Boxes Large",
+    "quantity_on_hand": 2000,
+    "reorder_level": 500,
+    "last_restock_date": "2024-12-28"
+  },
+  {
+    "item_id": 3,
+    "packaging_type": "Plastic Bags 50g",
+    "quantity_on_hand": 50000,
+    "reorder_level": 10000,
+    "last_restock_date": "2025-01-01"
+  },
+  {
+    "item_id": 4,
+    "packaging_type": "Cardboard Boxes Large",
+    "quantity_on_hand": 2000,
+    "reorder_level": 500,
+    "last_restock_date": "2024-12-28"
+  },
+  {
+    "item_id": 5,
+    "packaging_type": "Plastic Bags 50g",
+    "quantity_on_hand": 50000,
+    "reorder_level": 10000,
+    "last_restock_date": "2025-01-01"
+  },
+  {
+    "item_id": 6,
+    "packaging_type": "Cardboard Boxes Large",
+    "quantity_on_hand": 2000,
+    "reorder_level": 500,
+    "last_restock_date": "2024-12-28"
+  },
+  {
+    "item_id": 7,
+    "packaging_type": "Plastic Bags 50g",
+    "quantity_on_hand": 50000,
+    "reorder_level": 10000,
+    "last_restock_date": "2025-01-01"
+  },
+  {
+    "item_id": 8,
+    "packaging_type": "Cardboard Boxes Large",
+    "quantity_on_hand": 2000,
+    "reorder_level": 500,
+    "last_restock_date": "2024-12-28"
+  },
+  {
+    "item_id": 9,
+    "packaging_type": "Plastic Bags 50g",
+    "quantity_on_hand": 50000,
+    "reorder_level": 10000,
+    "last_restock_date": "2025-01-01"
+  },
+  {
+    "item_id": 10,
+    "packaging_type": "Cardboard Boxes Large",
+    "quantity_on_hand": 2000,
+    "reorder_level": 500,
+    "last_restock_date": "2024-12-28"
+  }
+]
+
+=========================================
+📋 Table 14/18: rf_archive_2024
+=========================================
+Columns:
+  - archive_id (integer)
+  - archived_date (date)
+  - rf_feeder (integer)
+  - rf_amplitude (numeric)
+  - notes (text)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "archive_id": 1,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 1,
+    "rf_amplitude": 1.0,
+    "notes": "MockValue_1"
+  },
+  {
+    "archive_id": 2,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 2,
+    "rf_amplitude": 2.0,
+    "notes": "MockValue_2"
+  },
+  {
+    "archive_id": 3,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 3,
+    "rf_amplitude": 3.0,
+    "notes": "MockValue_3"
+  },
+  {
+    "archive_id": 4,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 4,
+    "rf_amplitude": 4.0,
+    "notes": "MockValue_4"
+  },
+  {
+    "archive_id": 5,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 5,
+    "rf_amplitude": 5.0,
+    "notes": "MockValue_5"
+  },
+  {
+    "archive_id": 6,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 6,
+    "rf_amplitude": 6.0,
+    "notes": "MockValue_6"
+  },
+  {
+    "archive_id": 7,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 7,
+    "rf_amplitude": 7.0,
+    "notes": "MockValue_7"
+  },
+  {
+    "archive_id": 8,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 8,
+    "rf_amplitude": 8.0,
+    "notes": "MockValue_8"
+  },
+  {
+    "archive_id": 9,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 9,
+    "rf_amplitude": 9.0,
+    "notes": "MockValue_9"
+  },
+  {
+    "archive_id": 10,
+    "archived_date": "2026-05-25",
+    "rf_feeder": 10,
+    "rf_amplitude": 10.0,
+    "notes": "MockValue_10"
+  }
+]
+
+=========================================
+📋 Table 15/18: rf_production_batch_a01
+=========================================
+Columns:
+  - batch_id (integer)
+  - timestamp (timestamp without time zone)
+  - rf_feeder (integer)
+  - rf_amplitude (numeric)
+  - rf_weight (numeric)
+  - product_type (character varying)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "batch_id": 1,
+    "timestamp": "2026-01-11T00:14:19.523276",
+    "rf_feeder": 1,
+    "rf_amplitude": 50.5,
+    "rf_weight": 3.2,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 2,
+    "timestamp": "2026-01-11T00:14:19.523276",
+    "rf_feeder": 2,
+    "rf_amplitude": 45.0,
+    "rf_weight": 2.8,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 3,
+    "timestamp": "2026-01-11T00:14:19.523276",
+    "rf_feeder": 3,
+    "rf_amplitude": 52.3,
+    "rf_weight": 3.5,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 4,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 1,
+    "rf_amplitude": 50.5,
+    "rf_weight": 3.2,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 5,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 2,
+    "rf_amplitude": 45.0,
+    "rf_weight": 2.8,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 6,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 3,
+    "rf_amplitude": 52.3,
+    "rf_weight": 3.5,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 7,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 1,
+    "rf_amplitude": 50.5,
+    "rf_weight": 3.2,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 8,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 2,
+    "rf_amplitude": 45.0,
+    "rf_weight": 2.8,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 9,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 3,
+    "rf_amplitude": 52.3,
+    "rf_weight": 3.5,
+    "product_type": "Candy"
+  },
+  {
+    "batch_id": 10,
+    "timestamp": "2026-01-11T01:14:19.523276",
+    "rf_feeder": 1,
+    "rf_amplitude": 50.5,
+    "rf_weight": 3.2,
+    "product_type": "Candy"
+  }
+]
+
+=========================================
+📋 Table 16/18: shift_assignments
+=========================================
+Columns:
+  - assignment_id (integer)
+  - operator_name (character varying)
+  - shift (character varying)
+  - start_time (time without time zone)
+  - end_time (time without time zone)
+  - line_assigned (integer)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "assignment_id": 1,
+    "operator_name": "John Smith",
+    "shift": "Morning",
+    "start_time": "06:00:00",
+    "end_time": "14:00:00",
+    "line_assigned": 1
+  },
+  {
+    "assignment_id": 2,
+    "operator_name": "Jane Doe",
+    "shift": "Afternoon",
+    "start_time": "14:00:00",
+    "end_time": "22:00:00",
+    "line_assigned": 1
+  },
+  {
+    "assignment_id": 3,
+    "operator_name": "Bob Johnson",
+    "shift": "Night",
+    "start_time": "22:00:00",
+    "end_time": "06:00:00",
+    "line_assigned": 2
+  },
+  {
+    "assignment_id": 4,
+    "operator_name": "John Smith Duplicate",
+    "shift": "Morning",
+    "start_time": "06:00:00",
+    "end_time": "14:00:00",
+    "line_assigned": 1
+  },
+  {
+    "assignment_id": 5,
+    "operator_name": "Jane Doe Duplicate",
+    "shift": "Afternoon",
+    "start_time": "14:00:00",
+    "end_time": "22:00:00",
+    "line_assigned": 1
+  },
+  {
+    "assignment_id": 6,
+    "operator_name": "Bob Johnson Duplicate",
+    "shift": "Night",
+    "start_time": "22:00:00",
+    "end_time": "06:00:00",
+    "line_assigned": 2
+  },
+  {
+    "assignment_id": 7,
+    "operator_name": "John Smith Duplicate",
+    "shift": "Morning",
+    "start_time": "06:00:00",
+    "end_time": "14:00:00",
+    "line_assigned": 1
+  },
+  {
+    "assignment_id": 8,
+    "operator_name": "Jane Doe Duplicate",
+    "shift": "Afternoon",
+    "start_time": "14:00:00",
+    "end_time": "22:00:00",
+    "line_assigned": 1
+  },
+  {
+    "assignment_id": 9,
+    "operator_name": "Bob Johnson Duplicate",
+    "shift": "Night",
+    "start_time": "22:00:00",
+    "end_time": "06:00:00",
+    "line_assigned": 2
+  },
+  {
+    "assignment_id": 10,
+    "operator_name": "John Smith Duplicate",
+    "shift": "Morning",
+    "start_time": "06:00:00",
+    "end_time": "14:00:00",
+    "line_assigned": 1
+  }
+]
+
+=========================================
+📋 Table 17/18: sugar_silo_levels
+=========================================
+Columns:
+  - reading_id (integer)
+  - timestamp (timestamp without time zone)
+  - silo_number (integer)
+  - level_kg (numeric)
+  - temperature_celsius (numeric)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "reading_id": 1,
+    "timestamp": "2026-01-10T23:15:07.524657",
+    "silo_number": 3,
+    "level_kg": 7133.26,
+    "temperature_celsius": 21.25
+  },
+  {
+    "reading_id": 2,
+    "timestamp": "2026-01-10T22:15:07.524657",
+    "silo_number": 2,
+    "level_kg": 5177.32,
+    "temperature_celsius": 21.63
+  },
+  {
+    "reading_id": 3,
+    "timestamp": "2026-01-10T21:15:07.524657",
+    "silo_number": 1,
+    "level_kg": 5015.34,
+    "temperature_celsius": 19.43
+  },
+  {
+    "reading_id": 4,
+    "timestamp": "2026-01-10T20:15:07.524657",
+    "silo_number": 3,
+    "level_kg": 5854.65,
+    "temperature_celsius": 18.43
+  },
+  {
+    "reading_id": 5,
+    "timestamp": "2026-01-10T19:15:07.524657",
+    "silo_number": 1,
+    "level_kg": 5339.91,
+    "temperature_celsius": 18.45
+  },
+  {
+    "reading_id": 6,
+    "timestamp": "2026-01-10T18:15:07.524657",
+    "silo_number": 3,
+    "level_kg": 6289.16,
+    "temperature_celsius": 22.37
+  },
+  {
+    "reading_id": 7,
+    "timestamp": "2026-01-10T17:15:07.524657",
+    "silo_number": 2,
+    "level_kg": 7664.0,
+    "temperature_celsius": 18.48
+  },
+  {
+    "reading_id": 8,
+    "timestamp": "2026-01-10T16:15:07.524657",
+    "silo_number": 2,
+    "level_kg": 5648.11,
+    "temperature_celsius": 22.61
+  },
+  {
+    "reading_id": 9,
+    "timestamp": "2026-01-10T15:15:07.524657",
+    "silo_number": 2,
+    "level_kg": 5715.44,
+    "temperature_celsius": 21.72
+  },
+  {
+    "reading_id": 10,
+    "timestamp": "2026-01-10T14:15:07.524657",
+    "silo_number": 3,
+    "level_kg": 6570.34,
+    "temperature_celsius": 18.35
+  }
+]
+
+=========================================
+📋 Table 18/18: wastage_records
+=========================================
+Columns:
+  - id (integer)
+  - machine_id (character varying)
+  - line_id (character varying)
+  - grammage (character varying)
+  - shift (character varying)
+  - operator_name (character varying)
+  - jta_name (character varying)
+  - shift_incharge_name (character varying)
+  - wastage_kg (double precision)
+  - reason (character varying)
+  - timestamp (timestamp without time zone)
+  - created_at (timestamp without time zone)
+
+Sample Data (showing 10 rows):
+[
+  {
+    "id": 1,
+    "machine_id": "M01",
+    "line_id": "L01",
+    "grammage": "100g",
+    "shift": "Morning",
+    "operator_name": "John Smith",
+    "jta_name": "Bob Ross",
+    "shift_incharge_name": "David Vance",
+    "wastage_kg": 12.4,
+    "reason": "Start-up wastage",
+    "timestamp": "2026-05-20T08:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 2,
+    "machine_id": "M01",
+    "line_id": "L01",
+    "grammage": "100g",
+    "shift": "Morning",
+    "operator_name": "John Smith",
+    "jta_name": "Bob Ross",
+    "shift_incharge_name": "David Vance",
+    "wastage_kg": 8.6,
+    "reason": "Sealing issues",
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 3,
+    "machine_id": "M01",
+    "line_id": "L01",
+    "grammage": "100g",
+    "shift": "Morning",
+    "operator_name": "Jane Doe",
+    "jta_name": "Charlie Brown",
+    "shift_incharge_name": "Emily Watson",
+    "wastage_kg": 15.2,
+    "reason": "Weight variation",
+    "timestamp": "2026-05-20T10:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 4,
+    "machine_id": "M02",
+    "line_id": "L02",
+    "grammage": "250g",
+    "shift": "Afternoon",
+    "operator_name": "Alice Johnson",
+    "jta_name": "Bob Ross",
+    "shift_incharge_name": "Emily Watson",
+    "wastage_kg": 22.5,
+    "reason": "Roll change wastage",
+    "timestamp": "2026-05-20T08:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 5,
+    "machine_id": "M02",
+    "line_id": "L02",
+    "grammage": "250g",
+    "shift": "Afternoon",
+    "operator_name": "Alice Johnson",
+    "jta_name": "Charlie Brown",
+    "shift_incharge_name": "David Vance",
+    "wastage_kg": 18.9,
+    "reason": "Coding error",
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 6,
+    "machine_id": "M01",
+    "line_id": "L01",
+    "grammage": "100g",
+    "shift": "Morning",
+    "operator_name": "John Smith Duplicate",
+    "jta_name": "Bob Ross",
+    "shift_incharge_name": "David Vance",
+    "wastage_kg": 12.4,
+    "reason": "Start-up wastage",
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 7,
+    "machine_id": "M01",
+    "line_id": "L01",
+    "grammage": "100g",
+    "shift": "Morning",
+    "operator_name": "John Smith Duplicate",
+    "jta_name": "Bob Ross",
+    "shift_incharge_name": "David Vance",
+    "wastage_kg": 8.6,
+    "reason": "Sealing issues",
+    "timestamp": "2026-05-20T10:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 8,
+    "machine_id": "M01",
+    "line_id": "L01",
+    "grammage": "100g",
+    "shift": "Morning",
+    "operator_name": "Jane Doe Duplicate",
+    "jta_name": "Charlie Brown",
+    "shift_incharge_name": "Emily Watson",
+    "wastage_kg": 15.2,
+    "reason": "Weight variation",
+    "timestamp": "2026-05-20T11:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 9,
+    "machine_id": "M02",
+    "line_id": "L02",
+    "grammage": "250g",
+    "shift": "Afternoon",
+    "operator_name": "Alice Johnson Duplicate",
+    "jta_name": "Bob Ross",
+    "shift_incharge_name": "Emily Watson",
+    "wastage_kg": 22.5,
+    "reason": "Roll change wastage",
+    "timestamp": "2026-05-20T09:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  },
+  {
+    "id": 10,
+    "machine_id": "M02",
+    "line_id": "L02",
+    "grammage": "250g",
+    "shift": "Afternoon",
+    "operator_name": "Alice Johnson Duplicate",
+    "jta_name": "Charlie Brown",
+    "shift_incharge_name": "David Vance",
+    "wastage_kg": 18.9,
+    "reason": "Coding error",
+    "timestamp": "2026-05-20T10:00:00",
+    "created_at": "2026-05-20T14:37:20.420944"
+  }
+]
