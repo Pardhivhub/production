@@ -68,9 +68,12 @@ class QueryRouter:
         help_keywords = {"help", "how to use", "instructions", "commands", "menu"}
         
         # Highly robust check for table listing queries, even with typos like "ist all the tables"
+        # It must not contain specific metrics or table names to prevent false positives on analytical queries
         is_list_tables_query = (
             ("table" in q_lower or "tables" in q_lower) and
-            any(w in q_lower for w in ["list", "show", "what", "connected", "active", "available", "ist", "give", "display", "get"])
+            any(w in q_lower for w in ["list", "show", "what", "connected", "active", "available", "ist", "give", "display", "get"]) and
+            not any(m in q_lower for m in ["oee", "ega", "speed", "wastage", "waste", "electricity", "power", "cost", "silo", "sugar", "humidity", "temperature", "amplitude", "feeder"]) and
+            not any(t in q_lower for t in ["feedback_data", "oee_details_data", "ega_details_data", "wastage_records", "employees_list", "electric_meter_hourly", "sugar_silo_levels"])
         )
         
         if q_lower in help_keywords or any(h in q_lower for h in help_keywords) or is_list_tables_query:
