@@ -64,14 +64,25 @@ class QueryRouter:
                 "response": "I am an advanced Hybrid SQL + RAG Chatbot for industrial data analysis."
             }
 
-        # 3. Help
+        # 3. Help & List Tables
         help_keywords = {"help", "how to use", "instructions", "commands", "menu"}
-        if q_lower in help_keywords or any(h in q_lower for h in help_keywords):
+        list_tables_queries = {
+            "list all tables", "list tables", "show all tables", "show tables",
+            "what tables do you have", "what tables are there", "connected tables"
+        }
+        if q_lower in help_keywords or any(h in q_lower for h in help_keywords) or q_lower in list_tables_queries:
             tables = self._get_tables()
             table_list = ""
             if tables:
                 names = [self._get_table_name(t) for t in tables]
                 table_list = "\n\n**Connected Tables:**\n" + "\n".join(f"- `{n}`" for n in names)
+            
+            if q_lower in list_tables_queries:
+                return {
+                    "type": "greeting",
+                    "response": f"Here are the active tables in the currently connected database:{table_list}"
+                }
+                
             return {
                 "type": "greeting",
                 "response": (
