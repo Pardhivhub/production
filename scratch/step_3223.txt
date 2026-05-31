@@ -1,0 +1,146 @@
+<USER_REQUEST>
+
+
+Skip to content
+Using Gmail with screen readers
+26 of 3,287
+Chat_bot FIles
+Inbox
+
+Neeraja Goli <neeraja.goli@triniti.com>
+Attachments
+Mon 18 May, 11:40
+to me
+
+
+ 9 attachment
+  •  Scanned by Gmail
+
+Neeraja Goli <neeraja.goli@triniti.com>
+Attachments
+Mon 18 May, 11:42
+to me
+
+
+
+On Mon, May 18, 2026 at 11:39 AM Neeraja Goli <neeraja.goli@triniti.com> wrote:
+
+
+ 3 attachment
+  •  Scanned by Gmail
+
+Neeraja Goli <neeraja.goli@triniti.com>
+Attachments
+Mon 18 May, 11:43
+to me
+
+in vector store.
+ One attachment
+  •  Scanned by Gmail
+{
+  "relationships": [
+    {
+      "from_table": "ega_details_data",
+      "from_column": "machine_id",
+      "to_table": "oee_details_data",
+      "to_column": "machine_id",
+      "type": "many-to-many",
+      "description": "Link machine production data (EGA) with OEE metrics via machine_id"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "loop_id",
+      "to_table": "oee_details_data",
+      "to_column": "loop_id",
+      "type": "many-to-many",
+      "description": "Link production loops across EGA and OEE tables"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "grammage",
+      "to_table": "oee_details_data",
+      "to_column": "grammage",
+      "type": "many-to-many",
+      "description": "Link by SKU/grammage"
+    },
+    {
+      "from_table": "ega_details_data",
+      "from_column": "variant",
+      "to_table": "oee_details_data",
+      "to_column": "variant",
+      "type": "many-to-many",
+      "description": "Link product variant data between EGA and OEE"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "machine_id",
+      "to_table": "ega_details_data",
+      "to_column": "machine_id",
+      "type": "many-to-many",
+      "description": "Link wastage records to machine production data"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "line_id",
+      "to_table": "ega_details_data",
+      "to_column": "loop_id",
+      "type": "many-to-many",
+      "description": "Lin
+<truncated 66 bytes>
+from_table": "wastage_records",
+      "from_column": "grammage",
+      "to_table": "ega_details_data",
+      "to_column": "grammage",
+      "type": "many-to-many",
+      "description": "Link wastage records to SKU/grammage of production"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "shift",
+      "to_table": "ega_details_data",
+      "to_column": "start_time",
+      "type": "shift-based",
+      "description": "Shift-wise link based on start_time in production tables"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "operator_name",
+      "to_table": "employees_list",
+      "to_column": "name",
+      "type": "many-to-one",
+      "description": "Link operator in wastage record to employee master"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "jta_name",
+      "to_table": "employees_list",
+      "to_column": "name",
+      "type": "many-to-one",
+      "description": "Link JTA in wastage record to employee master"
+    },
+    {
+      "from_table": "wastage_records",
+      "from_column": "shift_incharge_name",
+      "to_table": "employees_list",
+      "to_column": "name",
+      "type": "many-to-one",
+      "description": "Link shift in-charge to employee master"
+    }
+  ]
+}
+relationships.json
+Displaying formulas.json.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-01T00:46:23+05:30.
+
+The user's current state is as follows:
+Active Document: /Users/pardhivkrishna/Desktop/production/production/kpi_engine.py (LANGUAGE_PYTHON)
+Cursor is on line: 452
+Other open documents:
+- /Users/pardhivkrishna/Desktop/production/production/kpi_engine.py (LANGUAGE_PYTHON)
+- /Users/pardhivkrishna/Desktop/production/production/table_selector.py (LANGUAGE_PYTHON)
+- /Users/pardhivkrishna/Desktop/production/production/query_suggester.py (LANGUAGE_PYTHON)
+- /Users/pardhivkrishna/Desktop/production/production/alert_system.py (LANGUAGE_PYTHON)
+- /Users/pardhivkrishna/Desktop/production/production/.env (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>
