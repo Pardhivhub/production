@@ -277,7 +277,7 @@ Instructions:
 3. Explain simply what went wrong (e.g., if a column or relation didn't exist, explain that we couldn't match or find records for that specific combination or aspect of data).
 4. Ask a polite, business-oriented clarifying question to help us get the correct information (e.g., "Could you please clarify what specific metric or machine you would like to analyze?").
 5. Keep your response extremely brief, polite, and under 50 words.
-6. DO NOT start your response with phrases like "Here's a friendly explanation of the technical issue", "Warmly", or other patronizing conversational preambles. Start directly with the business explanation of what occurred.
+6. DO NOT include any introductory preamble, conversational filler, or introductory phrase. Output ONLY the plain English explanation directly. Do NOT wrap it in quotes. Do NOT start with "Here's a friendly explanation of the technical issue" or any similar phrase. Start directly with the business explanation.
 
 Response:"""
         logger.info(f"Explaining database error conversationally for query: '{query}'")

@@ -238,7 +238,42 @@ async def stream_chat(req: QueryRequest):
         return StreamingResponse(fallback_stream(), media_type="text/event-stream")
 
     async def chat_event_generator():
+        # --- RECONSTRUCT PRONOUN / CONVERSATIONAL FOLLOW-UP QUERY ---
+        q_norm = req.query.strip().lower().rstrip("?.!")
+        
+        # Extended list of follow-up triggers and simple indicators
+        followup_phrases = {
+            "yes", "yes explain", "explain why", "yes please", "explain this",
+            "why", "explain", "sure", "ok", "okay", "please do", "go ahead",
+            "why is this happening", "tell me why", "analyze", "analyze this",
+            "do it", "please", "yes do it", "show me why", "tell me", "why?"
+        }
+        
+        is_short_followup = len(q_norm.split()) <= 4 and (
+            any(q_norm.startswith(word) for word in ["yes", "explain", "why", "analyze", "sure", "ok", "please"])
+        )
+        
+        is_suggested_action = any(phrase in q_norm for phrase in [
+            "analyze packaging inventory", "explain why this is happening", "analyze inventory levels"
+        ])
+        
+        if q_norm in followup_phrases or is_short_followup or is_suggested_action:
+            if req.session_id in conversation_manager.sessions and conversation_manager.sessions[req.session_id]:
+                last_turn = conversation_manager.sessions[req.session_id][-1]
+                prev_query = last_turn.get("query", "")
+                if prev_query:
+                    # Extract the original root query if it was already reconstructed
+                    if "Context of previous query:" in prev_query:
+                        root_query = prev_query.split("Context of previous query:")[-1].strip()
+                    else:
+                        root_query = prev_query
+                        
+                    reconstructed = f"{req.query}. Context of previous query: {root_query}"
+                    logger.info(f"Reconstructed follow-up query: '{req.query}' -> '{reconstructed}'")
+                    req.query = reconstructed
+
         conversation_manager.add_user_message(req.query)
+
 
         router = QueryRouter(active_schema)
         kpi_engine = KPIEngine(active_schema)
