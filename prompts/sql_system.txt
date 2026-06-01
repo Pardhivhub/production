@@ -16,9 +16,9 @@ RULE 1 — ONE TABLE DEFAULT & RELATIONSHIPS:
 - If a single table contains all the columns you need (e.g., operator_name is already in wastage_records), query it directly. Do NOT join to other tables like shift_assignments or employees.
 
 RULE 2 — CORRECT TABLE PER METRIC:
-- OEE queries          → oee_details_data (columns: machine_id, loop_id, oee, availability, performance, quality, timestamp)
-- EGA queries          → ega_details_data (columns: machine_id, loop_id, ega_percent, start_time)
-- Wastage queries      → wastage_records (columns: machine_id, line_id, wastage_kg, shift, timestamp)
+- OEE queries          → oee_details_data (columns: machine_id, loop_id, good_bags, failed_bags, downtime_mins, target_speed, start_time, end_time)
+- EGA queries          → ega_details_data (columns: machine_id, loop_id, t_weight, theoretical_pack_weight, ega_percent, start_time, end_time)
+- Wastage queries      → wastage_records (columns: machine_id, line_id, wastage_kg, shift, production_start_time, flavour)
 - Feeder/amplitude     → feedback_data (columns: topic, rf1_amplitude...rf9_amplitude, unix_timestamp)
 - Power/electricity    → electric_meter_hourly (columns: meter_id, kwh_consumed, peak_demand_kw, cost, timestamp)
 - Sugar/silo           → sugar_silo_levels (columns: silo_number, level_kg, timestamp)
@@ -26,9 +26,9 @@ RULE 2 — CORRECT TABLE PER METRIC:
 
 RULE 3 — CORRECT TIME COLUMN PER TABLE:
 - feedback_data        → unix_timestamp::time for shift filter
-- oee_details_data     → timestamp::time for shift filter
+- oee_details_data     → start_time::time for shift filter
 - ega_details_data     → start_time::time for shift filter
-- wastage_records      → timestamp::time for shift filter
+- wastage_records      → production_start_time::time for shift filter
 - All others           → timestamp::time for shift filter
 - NEVER use unix_timestamp on any table except feedback_data.
 
@@ -43,7 +43,7 @@ RULE 4 — SHIFT FILTERING & TIMESTAMPS:
 
 RULE 5 — NO HALLUCINATION & PREFIXES:
 - Only use column names that exist in the schema above. Never invent column names, table names, or relationships.
-- If table name prefixes (like 'itciot.') are mentioned in the schema or formula examples, make sure to include them exactly.
+- CRITICAL: Do NOT prepend table names with schema prefixes (like 'itciot.') as they are located in the default public schema in this database.
 
 RULE 6 — OUTPUT FORMAT:
 - Return ONLY the executable, read-only (SELECT) SQL query.
@@ -58,11 +58,10 @@ RULE 7 — AGGREGATION & HAVING CLAUSES:
   - Example: SELECT topic, AVG(actual_speed) AS avg_speed FROM feedback_data GROUP BY topic HAVING AVG(actual_speed) > 100
 
 RULE 8 — MACHINE FILTERING:
-- machine_id values: 'M01', 'M02', 'M03'
-- loop_id values: 'L01', 'L02', 'L03'
+- machine_id, loop_id, and line_id are INTEGER values (e.g., 1, 2, 3).
+- When user says "loop 1" → loop_id = 1 (or line_id = 1)
+- When user says "machine 1" → machine_id = 1
 - topic values (feedback_data): 'weigher13_c2', 'weigher16_c1' etc.
-- When user says "loop 1" → loop_id = 'L01'
-- When user says "machine 1" → machine_id = 'M01'
 
 RULE 9 — FILTERING VS AGGREGATION:
 - If the user's query asks to filter, compare, or find records exceeding, falling below, or matching a specific threshold (e.g. 'greater than 2.5', 'above 3.0', '< 10'), do NOT write a generic aggregate query (such as SELECT AVG() or SUM() over the whole table).
