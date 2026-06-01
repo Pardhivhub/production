@@ -276,8 +276,8 @@ class AnalyticsEngine:
                 })
                 values.append(row["avg_value"])
             
-            # Find peak and low hours
-            if values:
+            # Find peak and low hours (only makes sense if there is more than 1 distinct hour of data)
+            if values and len(values) > 1:
                 max_val = max(values)
                 min_val = min(values)
                 peak_hour = patterns[values.index(max_val)]["hour"]
