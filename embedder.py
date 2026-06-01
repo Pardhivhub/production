@@ -97,21 +97,47 @@ class SchemaEmbedder:
         return f"Table: {name}. Description: {description}. Columns: {cols}.{sample_str}"
 
     def embed_schema(self, schema: Dict):
-        """Index all tables from a ``schema`` dict.
-        ``schema`` must contain a top‑level ``tables`` list where each entry is a dict as described above.
+        """Index all tables from a ``schema`` dict, creating embeddings for the
+        full table as well as individual columns to support high-precision retrieval.
         """
         tables = schema.get("tables", [])
         if not tables:
             logger.warning("No tables found to embed.")
             return
 
-        ids, documents = [], []
-        for tbl in tables:
-            ids.append(tbl.get("name", ""))
-            documents.append(self._table_to_text(tbl))
+        ids, documents, metadatas = [], [], []
 
-        logger.info("Embedding %d tables into ChromaDB…", len(ids))
-        self.collection.upsert(ids=ids, documents=documents)
+        for tbl in tables:
+            table_name = tbl.get("name", "")
+            if not table_name:
+                continue
+
+            # 1. Embed the table as a whole
+            ids.append(f"{table_name}::table")
+            documents.append(self._table_to_text(tbl))
+            metadatas.append({"table_name": table_name, "type": "table"})
+
+            # 2. Embed each column individually (column-level embeddings)
+            for col in tbl.get("columns", []):
+                col_name = col.get("name", "")
+                if not col_name:
+                    continue
+
+                col_desc = col.get("description", "")
+                col_synonyms = col.get("synonyms", [])
+
+                desc_str = f"Table: {table_name}. Column: {col_name}"
+                if col_desc:
+                    desc_str += f". Description: {col_desc}"
+                if col_synonyms:
+                    desc_str += f". Synonyms: {', '.join(col_synonyms)}"
+
+                ids.append(f"{table_name}::column::{col_name}")
+                documents.append(desc_str)
+                metadatas.append({"table_name": table_name, "type": "column", "column_name": col_name})
+
+        logger.info("Embedding %d items (tables + columns) into ChromaDB…", len(ids))
+        self.collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
         logger.info("Schema embedding complete.")
 
     def query(self, user_question: str, top_k: int = 3) -> List[str]:
@@ -119,28 +145,77 @@ class SchemaEmbedder:
         Uses the same embedding function for the query text.
         """
         q_emb = self.ef([user_question])
-        results = self.collection.query(query_embeddings=q_emb, n_results=top_k)
-        return results["ids"][0] if results.get("ids") else []
+        # Capping n_results to collection size
+        collection_size = self.collection.count()
+        n_results = min(top_k * 3, collection_size)
+
+        if n_results == 0:
+            return []
+
+        results = self.collection.query(query_embeddings=q_emb, n_results=n_results) # Request more to account for column duplicates
+
+        if not results.get("metadatas") or not results["metadatas"][0]:
+            return []
+
+        # Deduplicate table names while preserving rank order
+        seen = set()
+        table_names = []
+        for metadata in results["metadatas"][0]:
+            t_name = metadata.get("table_name")
+            if t_name and t_name not in seen:
+                seen.add(t_name)
+                table_names.append(t_name)
+                if len(table_names) >= top_k:
+                    break
+
+        return table_names
     
     def query_with_scores(self, user_question: str, top_k: int = 5, distance_threshold: float = 1.2) -> List[tuple]:
-        """Return table names with their distance scores, filtered by threshold.
+        """Return table names with their best distance scores, filtered by threshold.
         ChromaDB returns L2 distance — lower is better.
         """
         q_emb = self.ef([user_question])
+        # Fetch more candidates because many could belong to the same table (e.g. multiple columns matched)
+        collection_size = self.collection.count()
+        n_results = min(top_k * 5, collection_size)
+
+        if n_results == 0:
+            return []
+
         results = self.collection.query(
             query_embeddings=q_emb, 
-            n_results=top_k,
-            include=["distances"]
+            n_results=n_results,
+            include=["distances", "metadatas"]
         )
         
-        if not results.get("ids") or not results.get("distances"):
+        if not results.get("distances") or not results.get("metadatas") or not results["distances"][0]:
             return []
         
-        ids = results["ids"][0]
         distances = results["distances"][0]
+        metadatas = results["metadatas"][0]
+
+        # Aggregate the best (lowest) score for each table
+        table_best_scores = {}
+        for dist, meta in zip(distances, metadatas):
+            t_name = meta.get("table_name")
+            if not t_name:
+                continue
+
+            if t_name not in table_best_scores or dist < table_best_scores[t_name]:
+                table_best_scores[t_name] = dist
+
+        # Filter by distance threshold and sort
+        filtered = [
+            (t_name, dist) for t_name, dist in table_best_scores.items()
+            if dist < distance_threshold
+        ]
+
+        # Sort by distance (ascending)
+        filtered.sort(key=lambda x: x[1])
+
+        # Return top_k
+        filtered = filtered[:top_k]
         
-        # Filter by distance threshold
-        filtered = [(id_, dist) for id_, dist in zip(ids, distances) if dist < distance_threshold]
-        logger.info(f"Query returned {len(filtered)}/{len(ids)} tables after score filtering (threshold={distance_threshold})")
+        logger.info(f"Query returned {len(filtered)} tables after score filtering (threshold={distance_threshold})")
         
         return filtered

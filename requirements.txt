@@ -11,3 +11,4 @@ chromadb
 requests
 numpy
 dateparser
+rank_bm25
