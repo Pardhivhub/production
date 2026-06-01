@@ -529,12 +529,12 @@
       "formula": "MW",
       "groupable_by": [
         "machine_id",
-        "loop_id",
+        "line_id",
         "DATE(production_start_time)"
       ],
       "filters": [
         "machine_id",
-        "loop_id",
+        "line_id",
         "date_range"
       ],
       "rounding": 2
@@ -555,12 +555,12 @@
       "formula": "MW",
       "groupable_by": [
         "machine_id",
-        "loop_id",
+        "line_id",
         "DATE(production_start_time)"
       ],
       "filters": [
         "machine_id",
-        "loop_id",
+        "line_id",
         "date_range"
       ],
       "rounding": 2
