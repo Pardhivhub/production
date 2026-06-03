@@ -188,6 +188,11 @@ When to JOIN:
     - NOTE: oee_details_data.machine_name already has 'Machine-6' format — JOIN machines only
       when you need the metadata name like 'Filler-6' or 'Robot-1'
 
+━━━ RULE 13: TEXT FILTERING (USE ILIKE) ━━━
+When filtering on string names like `line_name`, `machine_name`, or `plant_name` from user input, ALWAYS use `ILIKE '%partial_name%'` instead of exact `=` matching. Users often abbreviate names (e.g., they say "Line 1" but the DB has "Line 1-Plant 1 (West Dustin)"). 
+Example: `WHERE l.line_name ILIKE '%Line 1%'`
+  
+
 🚨 IMPOSSIBLE JOINS (DO NOT ATTEMPT):
   There is NO WAY to join `oee_details_data`, `ega_details_data`, or `production_speed_details_data` to `gmiiot_plants` or `gmiiot_lines`. They do NOT have a `plant_id` or `line_id`, and `machines` cannot bridge them because `line_machines` is empty.
   If a user asks for OEE, EGA, Downtime, or Speed by "Plant" or "Line", return a simple query on `wastage_records` instead (if related to wastage), or write a query with a WHERE clause using `plant_unit` = 'PC_UNIT' if they just said "plant" generically. NEVER invent a `plant_id` column.
