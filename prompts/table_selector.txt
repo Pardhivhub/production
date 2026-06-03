@@ -8,7 +8,7 @@ CONVERSATION HISTORY: {history}
 
 RULES:
 1. Select ONLY the tables that contain columns necessary to answer the question.
-2. If the question is a correlation, comparison, or join between multiple systems (e.g. "silo levels and humidity"), select ALL relevant tables (e.g. both 'sugar_silo_levels' and 'factory_humidity_logs').
+2. If the question is a correlation, comparison, or join between multiple systems (e.g. "OEE and speeds"), select ALL relevant tables (e.g. both 'oee_details_data' and 'production_speed_details_data').
 3. For general greetings or casual talk, return an empty list.
 4. Return ONLY a valid JSON array containing the selected table names. Do not wrap in markdown blocks, explanations, or additional text.
 

@@ -1,0 +1,43 @@
+{
+  "PRODUCTION_TABLES": [
+    "ega_details_data", 
+    "oee_details_data", 
+    "production_speed_details_data",
+    "wastage_records", 
+    "gsm_usage_details", 
+    "employees_list",
+    "machine_grammage_summary"
+  ],
+  "JOIN_TABLES": [
+    "gmiiot_plants",
+    "gmiiot_lines",
+    "machines"
+  ],
+  "NON_PRODUCTION_TABLES": [
+    "flavours", 
+    "preset_master_uploader", 
+    "application_features",
+    "application_group", 
+    "customer_analysis_config", 
+    "customer_application_features",
+    "customers", 
+    "device_parameters", 
+    "device_types", 
+    "devices",
+    "gsm_vendor_details", 
+    "roles", 
+    "topic_subscription_config", 
+    "user_role_application_features",
+    "user_roles", 
+    "users", 
+    "wastage_reasons", 
+    "operator_data_entry",
+    "production_reconciliation", 
+    "line_machines"
+  ],
+  "ALERT_PRODUCTION_TABLES": [
+    "ega_details_data",
+    "oee_details_data",
+    "wastage_records"
+  ]
+}

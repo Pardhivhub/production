@@ -23,6 +23,31 @@ def _load_exclude_words() -> set:
             "name", "role", "value"
         }
 
+def _load_table_rules() -> tuple:
+    try:
+        rules_path = Path(__file__).parent / "prompts" / "table_rules.json"
+        if rules_path.exists():
+            with open(rules_path, "r") as f:
+                data = json.load(f)
+                return (
+                    set(data.get("PRODUCTION_TABLES", [])),
+                    set(data.get("NON_PRODUCTION_TABLES", [])),
+                    set(data.get("JOIN_TABLES", [])),
+                )
+    except Exception as e:
+        logger.error(f"Failed to load table_rules.json in table_selector: {e}")
+    # Fallback to defaults
+    return (
+        {"ega_details_data", "oee_details_data", "production_speed_details_data",
+         "wastage_records", "gsm_usage_details"},
+        {"flavours", "wastage_reasons"},
+        {"machines", "gmiiot_plants", "gmiiot_lines"},
+    )
+
+PRODUCTION_TABLES, NON_PRODUCTION_TABLES, JOIN_TABLES = _load_table_rules()
+
+
+
 class TableSelector:
     """
     Fully schema-driven hybrid table selector.
@@ -162,10 +187,10 @@ class TableSelector:
                 scores[t] = max(prev, points)  # take highest signal, don't double-count
                 logger.debug(f"  Score {t}: {prev} → {scores[t]} ({reason})")
 
-        # --- Signal 1: KPI engine already identified these (score=9) ---
+        # --- Signal 1: KPI engine already identified these (score=15) ---
         if kpi_matched_tables:
             for t in kpi_matched_tables:
-                add_score(t, 9.0, "kpi_engine_confirmed")
+                add_score(t, 15.0, "kpi_engine_confirmed")
 
         # --- Signal 2: Exact column name match in query (score=10) ---
         EXCLUDE_COLUMN_EXACT = _load_exclude_words()
@@ -218,18 +243,40 @@ class TableSelector:
         except Exception as e:
             logger.error(f"Vector query failed: {e}")
 
-        # --- Cap irrelevant tables ---
+        # --- Cap / remove non-production config/metadata tables ---
+        # JOIN_TABLES (gmiiot_plants, gmiiot_lines, machines) are NEVER suppressed —
+        # they are dimension tables required for JOIN queries.
+        production_max_score = max(
+            (scores.get(t, 0) for t in PRODUCTION_TABLES if t in scores), default=0
+        )
+        for table_name in list(scores.keys()):
+            # Never suppress join/dimension tables — they are needed for JOIN queries
+            if table_name in JOIN_TABLES:
+                logger.debug(f"Kept join table {table_name} (protected from suppression)")
+                continue
+            if table_name in NON_PRODUCTION_TABLES:
+                if production_max_score >= 6:
+                    # A real production table is already answering — drop config tables entirely
+                    scores[table_name] = 0
+                    logger.debug(f"Suppressed non-production table {table_name} (production score={production_max_score})")
+                else:
+                    # No strong production match — cap config tables to avoid false positives
+                    scores[table_name] = min(scores[table_name], 3.0)
+                    logger.debug(f"Capped non-production table {table_name} to 3")
+
+        # --- Cap irrelevant tables when KPI engine identified the right ones ---
         if kpi_matched_tables:
             kpi_set = {t.lower() for t in kpi_matched_tables}
             for table_name in list(scores.keys()):
                 if table_name not in kpi_set:
-                    # Check if this table only scored because of generic shift/time words
                     if scores[table_name] <= 6 and table_name in [
-                        "shift_assignments", "wastage_records", 
-                        "employees_list", "feeder_metadata"
+                        "shift_assignments", "employees_list", "feeder_metadata"
                     ]:
                         scores[table_name] = min(scores[table_name], 2.0)
                         logger.debug(f"Capped irrelevant table {table_name} score to 2")
+
+        # Remove zero-scored tables entirely
+        scores = {k: v for k, v in scores.items() if v > 0}
 
         # --- Final ranking ---
         if not scores:
@@ -244,8 +291,12 @@ class TableSelector:
         if ranked:
             top_score = ranked[0][1]
             # If we have a very strong match (>= 8), filter out weak semantic noise (<= 6)
+            # EXCEPT for JOIN_TABLES, which should always be kept if they scored > 0
             if top_score >= 8:
-                ranked = [item for item in ranked if item[1] >= (top_score - 2)][:top_k]
+                ranked = [
+                    item for item in ranked 
+                    if item[1] >= (top_score - 2) or item[0] in JOIN_TABLES
+                ][:top_k]
             else:
                 ranked = ranked[:top_k]
         

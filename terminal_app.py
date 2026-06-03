@@ -111,8 +111,12 @@ async def main():
         # Retrieve conversation history context for follow-up query accuracy
         conv_context = conversation_memory.get_context(session_id)
 
-        # Table selection using semantic LLM architect selection
-        selected = selector.select_relevant_tables(query, history=conv_context)
+        kpi_matched = kpi_data.get("matched_tables", [])
+        selected = selector.select_relevant_tables(
+            query,
+            top_k=3,
+            kpi_matched_tables=kpi_matched
+        )
         reduced_schema = {"tables": selected["tables"]}
 
         # Retrieve any semantic documentation context via RAG

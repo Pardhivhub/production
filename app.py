@@ -81,6 +81,9 @@ async def startup_event():
         # Build table selector once globally
         table_selector = TableSelector(active_schema)
 
+        # Start continuous background monitoring
+        asyncio.create_task(alert_system.run_continuous_monitoring(active_schema))
+
         logger.info("Auto-connection successful!")
     except Exception as e:
         logger.warning(f"Auto-connection failed: {e}")
@@ -129,6 +132,7 @@ async def _do_reindex() -> str:
 
     try:
         raw_schema = await db_connector.get_schema_metadata()
+        semantic_layer.invalidate_cache()
         active_schema = await semantic_layer.enrich_schema(raw_schema)
 
         if table_selector is None:
@@ -204,6 +208,9 @@ async def connect_database(req: ConnectRequest):
             table_selector = TableSelector(active_schema)
         else:
             table_selector.refresh_schema(active_schema)
+
+        # Restart monitoring with new schema
+        asyncio.create_task(alert_system.run_continuous_monitoring(active_schema))
 
         logger.info(f"Connected and reindexed: {len(active_schema.get('tables', []))} tables")
 
@@ -483,8 +490,10 @@ async def stream_chat(req: QueryRequest):
                     if metric_col:
                         break
                 if metric_col:
+                    from kpi_engine import TIME_COLUMN_MAP
+                    time_col = TIME_COLUMN_MAP.get(selected_tables[0], "created_at")
                     auto_insights = await analytics_engine.auto_insights(
-                        req.query, selected_tables[0], metric_col
+                        req.query, selected_tables[0], metric_col, time_column=time_col
                     )
             except Exception as e:
                 logger.warning(f"Auto insights failed: {e}")
@@ -562,12 +571,14 @@ async def get_alerts():
 async def get_insights(table_name: str, metric_column: str):
     if not analytics_engine:
         raise HTTPException(status_code=503, detail="Analytics engine not initialized")
+    from kpi_engine import TIME_COLUMN_MAP
+    time_col = TIME_COLUMN_MAP.get(table_name, "created_at")
     return {
         "table": table_name,
         "metric": metric_column,
-        "anomalies": await analytics_engine.detect_anomalies(table_name, metric_column),
-        "trends": await analytics_engine.detect_trends(table_name, metric_column),
-        "time_patterns": await analytics_engine.analyze_time_patterns(table_name, metric_column)
+        "anomalies": await analytics_engine.detect_anomalies(table_name, metric_column, time_column=time_col),
+        "trends": await analytics_engine.detect_trends(table_name, metric_column, time_column=time_col),
+        "time_patterns": await analytics_engine.analyze_time_patterns(table_name, metric_column, time_column=time_col)
     }
 
 

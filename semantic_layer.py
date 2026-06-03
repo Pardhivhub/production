@@ -70,7 +70,19 @@ class SemanticLayer:
         table_name = table.get("name")
         columns = [c.get("name") for c in table.get("columns", [])]
         
-        # Quick heuristic descriptions for common patterns
+        # 1. Check for manual user-provided descriptions first
+        try:
+            import json, os
+            desc_file = os.path.join("config", "table_descriptions.json")
+            if os.path.exists(desc_file):
+                with open(desc_file, "r") as f:
+                    manual_descs = json.load(f)
+                    if table_name in manual_descs:
+                        return manual_descs[table_name]
+        except Exception as e:
+            logger.warning(f"Failed to load manual descriptions: {e}")
+        
+        # 2. Quick heuristic descriptions for common patterns
         name_lower = table_name.lower()
         if "ega" in name_lower:
             return "Excess Give Away (EGA) details per machine and variant"
@@ -196,7 +208,8 @@ class SemanticLayer:
             "ega_percent": ["excess giveaway", "give away percent", "extra weight", "overweight percent"],
             "oee_percent": ["overall efficiency", "equipment effectiveness", "oee score"],
             "unix_timestamp": ["timestamp", "time", "date", "recorded at", "log time"],
-            "machine_id": ["machine", "loop", "weigher", "line id"],
+            "machine_id": ["machine", "loop", "weigher", "line id", "machine name"],
+            "grammage": ["weight", "pack size", "gram", "grams", "g", "package weight"],
             "topic": ["feeder id", "feeder name", "machine topic"]
         }
         

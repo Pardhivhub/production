@@ -130,16 +130,14 @@ class ConversationManager:
 
         # Target table
         table_patterns = {
-            "feedback": "feedback_data",
             "ega": "ega_details_data",
             "oee": "oee_details_data",
-            "feeder": "feeder_metadata",
-            "electric": "electric_meter_hourly",
-            "silo": "sugar_silo_levels",
-            "humidity": "factory_humidity_logs",
+            "speed": "production_speed_details_data",
             "wastage": "wastage_records",
-            "employee": "employees_list",
-            "shift": "shift_assignments",
+            "gsm": "gsm_usage_details",
+            "flavour": "flavours",
+            "machine": "machines",
+            "employee": "employees_list"
         }
         if "table" in message_lower or "from" in message_lower:
             for keyword, table_name in table_patterns.items():

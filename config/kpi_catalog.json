@@ -19,7 +19,7 @@
         "TPW": "SUM(theoretical_pack_weight)"
       },
       "formula": "((TW - TPW) / NULLIF(TW, 0)) * 100",
-      "query": "SELECT ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight), 0)) * 100 AS ega_percent FROM ega_details_data",
+      "query": "SELECT ((SUM(t_weight) -SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight), 0)) * 100 AS ega_percent FROM ega_details_data",
       "groupable_by": [
         "machine_id",
         "grammage",
@@ -70,7 +70,6 @@
         "loop_id",
         "grammage",
         "variant",
-        "flavour",
         "date_range"
       ],
       "rounding": 1
@@ -104,7 +103,6 @@
         "loop_id",
         "grammage",
         "variant",
-        "flavour",
         "date_range"
       ],
       "rounding": 1
@@ -141,7 +139,6 @@
         "loop_id",
         "grammage",
         "variant",
-        "flavour",
         "date_range"
       ],
       "rounding": 2
@@ -208,7 +205,6 @@
         "loop_id",
         "grammage",
         "variant",
-        "flavour",
         "date_range"
       ],
       "rounding": 2
@@ -345,7 +341,6 @@
         "loop_id",
         "grammage",
         "variant",
-        "flavour",
         "date_range"
       ],
       "rounding": 1
@@ -384,7 +379,6 @@
         "loop_id",
         "grammage",
         "variant",
-        "flavour",
         "date_range"
       ],
       "rounding": 1
@@ -566,44 +560,6 @@
       "rounding": 2
     }
   },
-  "shifts": {
-    "morning shift": {
-      "start": "06:00:00",
-      "end": "14:00:00",
-      "label": "Morning Shift",
-      "aliases": [
-        "morning",
-        "morning shift",
-        "shift 1",
-        "first shift",
-        "day shift"
-      ]
-    },
-    "afternoon shift": {
-      "start": "14:00:00",
-      "end": "22:00:00",
-      "label": "Afternoon Shift",
-      "aliases": [
-        "afternoon",
-        "afternoon shift",
-        "shift 2",
-        "second shift",
-        "evening shift"
-      ]
-    },
-    "night shift": {
-      "start": "22:00:00",
-      "end": "06:00:00",
-      "label": "Night Shift",
-      "aliases": [
-        "night",
-        "night shift",
-        "shift 3",
-        "third shift",
-        "overnight shift"
-      ]
-    }
-  },
   "relationships": [
     {
       "from_table": "ega_details_data",
@@ -694,19 +650,42 @@
       "description": "Link shift in-charge to employee master"
     }
   ],
-  "exclude_column_words": [
-    "id",
-    "uuid",
-    "created_at",
-    "updated_at",
-    "timestamp",
-    "time",
-    "date",
-    "start_time",
-    "end_time",
-    "name",
-    "role",
-    "value",
-    "shift"
-  ]
+  "shifts": {
+    "morning shift": {
+      "start": "06:00:00",
+      "end": "14:00:00",
+      "label": "Morning Shift",
+      "aliases": [
+        "morning",
+        "morning shift",
+        "shift 1",
+        "first shift",
+        "day shift"
+      ]
+    },
+    "afternoon shift": {
+      "start": "14:00:00",
+      "end": "22:00:00",
+      "label": "Afternoon Shift",
+      "aliases": [
+        "afternoon",
+        "afternoon shift",
+        "shift 2",
+        "second shift",
+        "evening shift"
+      ]
+    },
+    "night shift": {
+      "start": "22:00:00",
+      "end": "06:00:00",
+      "label": "Night Shift",
+      "aliases": [
+        "night",
+        "night shift",
+        "shift 3",
+        "third shift",
+        "overnight shift"
+      ]
+    }
+  }
 }

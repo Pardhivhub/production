@@ -58,9 +58,9 @@ class ConstraintAwareQueryGenerator:
     
     def _remove_joins(self, query: str, constraints: Dict, schema: Dict) -> str:
         """Remove joins and rewrite query for single table"""
-        target_table = constraints.get("target_table", "feedback_data")
+        target_table = constraints.get("target_table", "oee_details_data")
         operation = constraints.get("operation", "count_distinct")
-        target_column = constraints.get("target_column", "feeder")
+        target_column = constraints.get("target_column", "machine_id")
         
         # Simple rewrite based on operation type
         if operation == "count_distinct":
@@ -74,7 +74,7 @@ class ConstraintAwareQueryGenerator:
     def _rewrite_for_table(self, query: str, target_table: str, constraints: Dict, schema: Dict) -> str:
         """Rewrite query to use specific table"""
         operation = constraints.get("operation", "count_distinct")
-        target_column = constraints.get("target_column", "feeder")
+        target_column = constraints.get("target_column", "machine_id")
         
         if operation == "count_distinct":
             column_name = self._find_column_name(target_column, target_table, schema)
@@ -108,11 +108,12 @@ class ConstraintAwareQueryGenerator:
                 
         # 3. Fuzzy match / common patterns
         common_patterns = [
-            "feeder_id",
-            "feeder_number",
-            "feeder",
-            "feeder_name",
-            "rf_feeder"
+            "machine_id",
+            "loop_id",
+            "variant",
+            "grammage",
+            "timestamp",
+            "start_time"
         ]
         for pat in common_patterns:
             if pat in columns:
@@ -125,39 +126,33 @@ class ConstraintAwareQueryGenerator:
     
     def build_context_prompt(self, user_request: str, schema: Dict) -> str:
         """Build enhanced prompt with conversation context for LLM"""
+        from pathlib import Path
         
         context = self.conversation_manager.get_conversation_context(last_n=5)
         constraints = self.conversation_manager.get_active_constraints()
         
-        prompt_parts = [
-            "You are a SQL query generator. Generate queries based on user requests and constraints.",
-            "",
-            context,
-            "",
-            "IMPORTANT RULES:",
-        ]
-        
-        # Add constraint-specific rules
+        rules = []
         if constraints.get("no_joins", False):
-            prompt_parts.append("- DO NOT USE ANY JOIN OPERATIONS")
-            prompt_parts.append("- Query must use only a single table")
+            rules.append("- DO NOT USE ANY JOIN OPERATIONS")
+            rules.append("- Query must use only a single table")
         
         if constraints.get("target_table"):
-            prompt_parts.append(f"- Query MUST use table: {constraints['target_table']}")
+            rules.append(f"- Query MUST use table: {constraints['target_table']}")
         
         if constraints.get("operation") == "count_distinct":
-            prompt_parts.append("- Use COUNT(DISTINCT column_name) for counting unique values")
+            rules.append("- Use COUNT(DISTINCT column_name) for counting unique values")
+            
+        rules_str = "\n".join(rules) if rules else "No active strict constraints."
         
-        prompt_parts.extend([
-            "",
-            f"USER REQUEST: {user_request}",
-            "",
-            "Generate a SQL query that:",
-            "1. Respects ALL active constraints above",
-            "2. Answers the user's request",
-            "3. Uses only tables and columns from the provided schema",
-            "",
-            "Return ONLY the SQL query, nothing else."
-        ])
-        
-        return "\n".join(prompt_parts)
+        try:
+            prompt_path = Path(__file__).parent / "prompts" / "constraint_generator.txt"
+            template = prompt_path.read_text(encoding="utf-8")
+            return template.format(
+                context=context,
+                constraint_rules=rules_str,
+                user_request=user_request
+            )
+        except Exception as e:
+            logger.error(f"Failed to load constraint_generator prompt: {e}")
+            # Fallback inline prompt if file is missing
+            return f"Generate SQL for {user_request}. Constraints: {rules_str}"

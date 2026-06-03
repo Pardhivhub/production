@@ -297,16 +297,16 @@ class AnalyticsEngine:
             logger.error(f"Time pattern analysis failed: {e}")
             return {"hourly_patterns": [], "error": str(e)}
     
-    async def auto_insights(self, query: str, table: str, metric_column: str) -> str:
+    async def auto_insights(self, query: str, table: str, metric_column: str, time_column: str = "created_at") -> str:
         """
         Automatically run multiple analyses and generate insights summary.
         """
         insights = []
         
         # Run analyses in parallel
-        anomaly_task = self.detect_anomalies(table, metric_column)
-        trend_task = self.detect_trends(table, metric_column)
-        time_pattern_task = self.analyze_time_patterns(table, metric_column)
+        anomaly_task = self.detect_anomalies(table, metric_column, time_column=time_column)
+        trend_task = self.detect_trends(table, metric_column, time_column=time_column)
+        time_pattern_task = self.analyze_time_patterns(table, metric_column, time_column=time_column)
         
         anomalies, trends, time_patterns = await asyncio.gather(
             anomaly_task, trend_task, time_pattern_task, return_exceptions=True

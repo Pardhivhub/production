@@ -33,6 +33,41 @@ class SQLGenerator:
     def __init__(self, db_connector):
         self.db = db_connector
 
+    def sanitize_single_table_query(self, sql: str) -> str:
+        sql_upper = sql.upper()
+        # Avoid cleaning queries that have JOIN operations
+        join_keywords = ["JOIN", "INNER", "LEFT", "RIGHT", "CROSS", "OUTER"]
+        if any(re.search(rf"\b{kw}\b", sql_upper) for kw in join_keywords):
+            return sql
+            
+        # Avoid cleaning queries that have multiple tables in FROM
+        if "," in sql:
+            from_idx = sql_upper.find("FROM")
+            if from_idx != -1:
+                where_idx = sql_upper.find("WHERE", from_idx)
+                sub_from_to_where = sql[from_idx:where_idx] if where_idx != -1 else sql[from_idx:]
+                if "," in sub_from_to_where:
+                    return sql
+
+        from_pattern = r"\bFROM\s+([a-zA-Z0-9_]+)(?:\s+(?:AS\s+)?([a-zA-Z0-9_]+))?"
+        from_match = re.search(from_pattern, sql, flags=re.IGNORECASE)
+        if not from_match:
+            return sql
+            
+        table_name = from_match.group(1)
+        alias = from_match.group(2)
+        
+        if alias and alias.upper() in ["WHERE", "GROUP", "ORDER", "LIMIT", "HAVING", "ON", "JOIN", "INNER", "LEFT", "RIGHT"]:
+            alias = None
+            
+        if alias:
+            pattern = rf"\bFROM\s+{table_name}\s+(?:AS\s+)?{alias}\b"
+            sql = re.sub(pattern, f"FROM {table_name}", sql, flags=re.IGNORECASE)
+            sql = re.sub(rf"\b{alias}\.", "", sql, flags=re.IGNORECASE)
+            
+        sql = re.sub(rf"\b{table_name}\.", "", sql, flags=re.IGNORECASE)
+        return sql
+
     def _format_schema(self, schema_info: dict) -> str:
         lines = []
         for table in schema_info.get("tables", []):
@@ -131,6 +166,9 @@ class SQLGenerator:
                 # Trim semicolons and whitespaces
                 sql = sql.strip().rstrip(";")
                 
+                # Sanitize single table queries to prevent alias/prefix mismatches
+                sql = self.sanitize_single_table_query(sql)
+                
                 # Validate SQL with EXPLAIN dry-run before returning
                 try:
                     await self.db.execute_query(f"EXPLAIN {sql}")
@@ -139,11 +177,24 @@ class SQLGenerator:
                 except Exception as validation_error:
                     last_error = str(validation_error)
                     last_sql = sql
-                    logger.warning(f"SQL validation failed (attempt {attempt + 1}): {validation_error}")
+                    
+                    # Add helpful error context
+                    error_msg = str(validation_error)
+                    if "column" in error_msg.lower() and "does not exist" in error_msg.lower():
+                        error_msg += "\n\nTROUBLESHOOTING: Check if column name exists in schema. Common mistakes:\n"
+                        error_msg += "- Using 'machine_name' instead of 'machine_id'\n"
+                        error_msg += "- Missing 'g' suffix in grammage values (e.g., grammage = '10.5g' not grammage = 10.5)"
+                    elif "syntax" in error_msg.lower():
+                        error_msg += "\n\nTROUBLESHOOTING: Check SQL syntax. Common issues:\n"
+                        error_msg += "- Missing quotes around string values (e.g., variant = 'Ridge Cut')\n"
+                        error_msg += "- Incorrect WHERE clause structure"
+                    
+                    logger.warning(f"SQL validation failed (attempt {attempt + 1}): {error_msg}")
+                    last_error = error_msg
                     
                     # If this was the last retry, raise the error
                     if attempt == max_retries:
-                        raise validation_error
+                        raise Exception(error_msg)
                     
             except Exception as e:
                 if attempt == max_retries:
@@ -181,22 +232,29 @@ class SQLGenerator:
                     if count_value == 0:
                         empty_result_guidance = """\n\nIMPORTANT: The result is empty or zero. You MUST:
 1. Clearly state what was found (or not found)
-2. Provide 2-3 possible reasons why this might be the case
-3. Suggest alternative tables or approaches the user could try
+2. Provide 2-3 possible reasons why this might be the case (e.g., date not in database, no matching variant, machine not recorded)
+3. Suggest checking available dates or alternative filters
 4. Ask helpful follow-up questions to guide the user
 
 Example format:
-"Based on the query results, there are 0 [items] in the [table] table. This could mean:
-- Possibility 1: [reason]
-- Possibility 2: [reason]
-- Possibility 3: [reason]
+"Based on the query results, there are 0 [items] matching your criteria. This could mean:
+- The date you specified may not have data in the database
+- The variant or machine ID might not match exactly
+- Data for that period hasn't been recorded yet
 
 To investigate further, you might want to:
-- Check [alternative table/approach]
-- Verify [data condition]
+- Check what dates are available in the database
+- Verify the exact variant names or machine IDs
+- Try a broader date range
 
-Would you like me to check [specific suggestion]?"
+Would you like me to show you available dates or machines?"
 """
+                else:
+                    empty_result_guidance = """\n\nIMPORTANT: No rows were returned. You MUST:
+1. Clearly state that no matching records were found
+2. Suggest 2-3 possible reasons (date mismatch, variant name mismatch, no data for that period)
+3. Offer to check available dates, variants, or machines
+4. Be helpful and proactive in guiding the user"""
             except Exception:
                 pass
         
@@ -232,20 +290,11 @@ Would you like me to check [specific suggestion]?"
         """
         Explain a conceptual manufacturing question directly using RAG reference documents.
         """
-        prompt = f"""You are an expert industrial manufacturing assistant. 
-Explain the following manufacturing concept or term to the user.
-
-User Question: {query}
-
-Retrieved Reference Material:
-{rag_context if rag_context else 'No reference material found.'}
-
-Instructions:
-1. Be clear, precise, and professional.
-2. Directly answer the question using the retrieved reference material.
-3. If the reference material doesn't contain the answer, use your general knowledge of potato chip manufacturing and smart factory systems to provide a helpful, accurate definition.
-
-Answer:"""
+        fallback_rag_prompt_template = load_prompt("fallback_rag.txt")
+        prompt = fallback_rag_prompt_template.format(
+            query=query, 
+            rag_context=rag_context if rag_context else 'No reference material found.'
+        )
         logger.info(f"Explaining RAG concept for query: '{query}'")
         try:
             response = await acompletion(
@@ -265,21 +314,12 @@ Answer:"""
         Explain a SQL generator or database execution error to the user in a friendly,
         plain-English way, and ask a clarifying question so the user can understand and help us fix it.
         """
-        prompt = f"""You are a friendly and expert industrial database analyst assistant.
-The user asked a question: "{query}"
-
-However, we encountered a technical issue during the {stage} stage.
-Technical Issue: "{error_msg}"
-
-Instructions:
-1. Translate this technical issue into a warm, friendly, plain English response that an ordinary factory manager can understand.
-2. DO NOT mention database tables, columns, rows, SQL, code, or technical variables. Speak purely in terms of business concepts (OEE, wastage, silos, feeders, client orders, etc.).
-3. Explain simply what went wrong (e.g., if a column or relation didn't exist, explain that we couldn't match or find records for that specific combination or aspect of data).
-4. Ask a polite, business-oriented clarifying question to help us get the correct information (e.g., "Could you please clarify what specific metric or machine you would like to analyze?").
-5. Keep your response extremely brief, polite, and under 50 words.
-6. DO NOT include any introductory preamble, conversational filler, or introductory phrase. Output ONLY the plain English explanation directly. Do NOT wrap it in quotes. Do NOT start with "Here's a friendly explanation of the technical issue" or any similar phrase. Start directly with the business explanation.
-
-Response:"""
+        fallback_error_prompt_template = load_prompt("fallback_error.txt")
+        prompt = fallback_error_prompt_template.format(
+            query=query,
+            stage=stage,
+            error_msg=error_msg
+        )
         logger.info(f"Explaining database error conversationally for query: '{query}'")
         try:
             response = await acompletion(
@@ -293,4 +333,3 @@ Response:"""
         except Exception as e:
             logger.error(f"Error explanation generation failed: {e}")
             raise e
-

@@ -67,13 +67,12 @@ class QueryRouter:
         # 3. Help & List Tables
         help_keywords = {"help", "how to use", "instructions", "commands", "menu"}
         
-        # Highly robust check for table listing queries, even with typos like "ist all the tables"
-        # It must not contain specific metrics or table names to prevent false positives on analytical queries
+        # Robust check for table listing queries
         is_list_tables_query = (
             ("table" in q_lower or "tables" in q_lower) and
             any(w in q_lower for w in ["list", "show", "what", "connected", "active", "available", "ist", "give", "display", "get"]) and
-            not any(m in q_lower for m in ["oee", "ega", "speed", "wastage", "waste", "electricity", "power", "cost", "silo", "sugar", "humidity", "temperature", "amplitude", "feeder"]) and
-            not any(t in q_lower for t in ["feedback_data", "oee_details_data", "ega_details_data", "wastage_records", "employees_list", "electric_meter_hourly", "sugar_silo_levels"])
+            not any(m in q_lower for m in ["oee", "ega", "speed", "wastage", "waste", "downtime", "failed", "bags"]) and
+            not any(t in q_lower for t in ["oee_details_data", "ega_details_data", "production_speed_details_data", "wastage_records", "gsm_usage_details"])
         )
         
         if q_lower in help_keywords or any(h in q_lower for h in help_keywords) or is_list_tables_query:
@@ -124,7 +123,7 @@ class QueryRouter:
             "list", "show", "find", "highest", "lowest", "most", "least",
             "compare", "total", "mean", "hourly", "daily", "monthly",
             "oee", "ega", "shift", "efficiency", "stopped", "downtime", "wastage",
-            "employee", "feeder", "operator"
+            "employee", "operator", "speed"
         }
 
         q_clean = q_lower.replace("_", " ").replace("-", " ").replace("?", " ")
@@ -163,7 +162,7 @@ class QueryRouter:
         if ambiguity:
             return ambiguity
 
-        # 6. Off-topic guardrail (Reuses pre-calculated sets for extreme speed)
+        # 6. Off-topic guardrail
         if tables:
             has_operators = any(
                 op in q_lower for op in ("=", ">", "<", "percent", "%", "average", "sum")
@@ -177,12 +176,10 @@ class QueryRouter:
                         "I couldn't find a match for that in your factory schema.\n\n"
                         "I can help with:\n"
                         "📊 OEE & Production Performance\n"
-                        "⚙️ Feeder Calibration & Telemetry\n"
-                        "⚡ Energy & Utility Consumption\n"
-                        "🍯 Silo Inventory & Raw Materials\n"
-                        "🌡️ Environmental Logs\n"
-                        "👥 Staff Schedules & Certifications\n\n"
-                        "Try: *'What is average OEE of weigher 3?'*"
+                        "⚖️ Excess Giveaway Analysis (EGA)\n"
+                        "⚡ Machine Production Speeds\n"
+                        "🗑️ Material Wastage & Scrap Logs\n\n"
+                        "Try: *'What is average OEE of machine 1?'*"
                     )
                 }
 
@@ -196,7 +193,6 @@ class QueryRouter:
         """
         Detects genuinely ambiguous queries and returns a clarification
         request with suggestions. Returns None if query is clear enough.
-        Only fires when truly needed — not on every query.
         """
         # Bypasses for specific data filters and comparison operators
         filter_indicators = [
@@ -208,17 +204,15 @@ class QueryRouter:
 
         is_short = len(q_lower.split()) <= 4
 
-
         # Define metrics and words for Machine rule
-        machine_metrics = ["ega percent", "amplitude", "feeder", "weigher"]
+        machine_metrics = ["ega percent", "oee", "speed", "wastage"]
         machine_words = [
-            "machine", "loop", "weigher", "line", "feeder",
-            "m-1", "m-2", "m-3", "loop 1", "loop 2", "loop 3"
+            "machine", "loop", "line", "m01", "m02", "m03", "l01", "l02", "l03"
         ]
         has_machine_metric = any(w in q_lower for w in machine_metrics)
         has_machine_specified = any(w in q_lower for w in machine_words)
 
-        # --- Ambiguity Rule 1: Machine/entity not specified (Prioritized) ---
+        # --- Ambiguity Rule 1: Machine/entity not specified ---
         if has_machine_metric and not has_machine_specified and is_short:
             return {
                 "type": "clarification",
@@ -226,26 +220,23 @@ class QueryRouter:
                 "suggestions": [
                     "All machines",
                     "Machine 1 (Loop 1)",
-                    "Machine 2 (Loop 2)",
-                    "Machine 3 (Loop 3)"
+                    "Machine 2",
+                    "Line 1"
                 ],
                 "original_query": q_lower
             }
 
         # Define metrics and words for Time rule
-        time_sensitive = ["ega", "oee", "efficiency", "consumption", "cost", "production"]
+        time_sensitive = ["ega", "oee", "efficiency", "production", "speed", "wastage"]
         time_words = [
             "today", "yesterday", "last week", "this week", "last month",
-            "this month", "january", "february", "march", "april", "may",
-            "june", "july", "august", "september", "october", "november",
-            "december", "shift", "morning", "afternoon", "night",
+            "this month", "shift", "morning", "afternoon", "night",
             "last", "past", "recent", "from", "between", "since"
         ]
         has_time_sensitive = any(w in q_lower for w in time_sensitive)
         has_time_word = any(w in q_lower for w in time_words)
 
         # --- Ambiguity Rule 2: No time range on time-sensitive metrics ---
-        # Only reached if machine is already clear or not applicable
         if has_time_sensitive and not has_time_word and is_short:
             metric = next((w for w in time_sensitive if w in q_lower), "this metric")
             return {
@@ -270,9 +261,8 @@ class QueryRouter:
                 "suggestions": [
                     "EGA percent breakdown",
                     "OEE performance",
-                    "Feeder amplitudes",
-                    "Energy consumption",
-                    "Silo inventory levels"
+                    "Production speeds",
+                    "Material wastage logs"
                 ],
                 "original_query": q_lower
             }
@@ -291,7 +281,7 @@ class QueryRouter:
                         "Machine 1 vs Machine 2",
                         "Morning shift vs Night shift",
                         "This week vs Last week",
-                        "Variant A vs Variant B"
+                        "Variant Flat Cut vs Ridge Cut"
                     ],
                     "original_query": q_lower
                 }

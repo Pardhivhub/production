@@ -14,28 +14,47 @@ class OllamaEmbeddingFunction(EmbeddingFunction):
     """
     def __init__(self, model_name: str, url: str):
         self.model_name = model_name
-        self.url = url
+        # Automatically redirect legacy /api/embeddings to the modern and robust /api/embed
+        if url.endswith("/api/embeddings"):
+            self.url = url.replace("/api/embeddings", "/api/embed")
+        else:
+            self.url = url
 
     def __call__(self, input: List[str]) -> List[List[float]]:
-        # Chroma passes the parameter as 'input', but we can map it
-        inputs = input
-        embeddings: List[List[float]] = []
-        for text in inputs:
-            try:
-                # Truncate text to 1000 characters to fit safely within the 512-token context limit
-                safe_text = text[:1000]
-                response = requests.post(
-                    self.url,
-                    json={"model": self.model_name, "prompt": safe_text},
-                    timeout=180,
-                )
-                response.raise_for_status()
-                embeddings.append(response.json()["embedding"])
-            except Exception as e:
-                logger.error(f"Failed to embed text (len={len(text)}): {e}")
-                # Return a zero‑vector of the expected dimension (384 for all‑minilm)
-                embeddings.append([0.0] * 384)
-        return embeddings
+        # Map the input to a list of strings and truncate to 1000 chars to fit context limit
+        inputs = [text[:1000] for text in input]
+        try:
+            # Send batch request to modern /api/embed
+            response = requests.post(
+                self.url,
+                json={"model": self.model_name, "input": inputs},
+                timeout=180,
+            )
+            response.raise_for_status()
+            return response.json()["embeddings"]
+        except Exception as e:
+            logger.error(f"Batch embedding failed: {e}. Falling back to single-item fallback.")
+            
+            # Fallback to single-item processing or legacy endpoint just in case
+            embeddings: List[List[float]] = []
+            for text in inputs:
+                try:
+                    response = requests.post(
+                        self.url,
+                        json={"model": self.model_name, "input": text},
+                        timeout=30,
+                    )
+                    response.raise_for_status()
+                    res_json = response.json()
+                    if "embeddings" in res_json:
+                        embeddings.append(res_json["embeddings"][0])
+                    else:
+                        embeddings.append(res_json["embedding"])
+                except Exception as ex:
+                    logger.error(f"Fallback failed for text (len={len(text)}): {ex}")
+                    embeddings.append([0.0] * 384)
+            return embeddings
+
 
 class SchemaEmbedder:
     """Embeds each table (its name, description and column list) into a ChromaDB collection.
