@@ -48,8 +48,8 @@ Never use: machine_name = 'M-101' or any other format.
   - Time column: start_time
 
 ━━━ KNOWN VARIANTS AND LOOPS ━━━
-• Variants: 'Flat Cut', 'Ridge Cut' (only 2 variants exist)
-• Loops: loop_id 1 (loop_1), loop_id 2 (loop_2)
+• Variants: 'Flat Cut', 'Ridge Cut'. Note: `variant` is a column in `ega_details_data`. Do NOT filter `machine_name` for variants.
+• Loops: loop_id 1 (loop_1), loop_id 2 (loop_2). Note: `loop_id` and `loop_name` exist inside the production tables (e.g. `oee_details_data`), NOT in `machines`. Do not do `m.loop_name`.
 • Machines: machine_id 1..20, machine_name 'Machine-1' through 'Machine-20'
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -60,9 +60,10 @@ All production tables store MULTIPLE HOURLY ROWS per machine per day.
 ⚠️ NEVER query a single row to find daily results — always aggregate.
 
 When asked "highest/lowest/most/least [metric] on [DATE]":
-→ ALWAYS: GROUP BY machine_id + SUM() or AVG() + ORDER BY [aggregate] DESC/ASC + LIMIT N
+→ ALWAYS: GROUP BY the requested entity (e.g. machine_id, line_name, grammage) + SUM() or AVG() + ORDER BY [aggregate] DESC/ASC + LIMIT N
 
-🔴 MANDATORY RULE: IF QUERY HAS A DATE FILTER → MUST USE GROUP BY machine_id!
+🔴 MANDATORY RULE: IF QUERY HAS A DATE FILTER → MUST USE GROUP BY the entity being compared (e.g. machine_id or grammage)!
+⚠️ DIVISION SAFETY: ALWAYS wrap the denominator in NULLIF(denominator, 0) for ANY division to prevent division-by-zero errors!
 
 Aggregation type per metric:
   • Countable metrics (good_bags, failed_bags, downtime_mins, wastage_kg) → SUM()
@@ -149,12 +150,14 @@ There is NO 'availability' column in oee_details_data. Calculate it:
   ((60.0 - downtime_mins) / 60.0) * 100 AS availability_pct
 (Each row covers a 60-minute interval. downtime_mins = minutes stopped.)
 
-━━━ RULE 9: OEE DOES NOT EXIST AS COLUMN ━━━
-oee_details_data has NO 'oee' column. Use:
+━━━ RULE 9: OEE & QUALITY DO NOT EXIST AS COLUMNS ━━━
+oee_details_data has NO 'oee' or 'quality_percentage' columns. 
+If asked for OEE, or quality, calculate them:
+  - Quality percentage: COALESCE((SUM(good_bags) * 100.0) / NULLIF(SUM(good_bags) + SUM(failed_bags), 0), 0)
   - downtime_mins for downtime/availability
   - good_bags for quality/output
   - failed_bags for rejection
-  - NEVER reference a column named 'oee'
+  - NEVER reference a column named 'oee' or 'quality_percentage' directly
 
 ━━━ RULE 10: MULTI-MACHINE COMPARISON ━━━
 When user compares specific machines (e.g., "machine 6 and machine 7"):
@@ -228,7 +231,7 @@ Example: `WHERE l.line_name ILIKE '%Line 1%'`
 ═══════════════════════════════════════════════════
 FINAL CHECKLIST BEFORE OUTPUTTING SQL:
 ═══════════════════════════════════════════════════
-✅ 1. DATE FILTER present? → GROUP BY machine_id + SUM()/AVG() MANDATORY
+✅ 1. DATE FILTER present? → GROUP BY requested entity (machine_id, grammage, etc.) + SUM()/AVG() MANDATORY
 ✅ 2. HIGHEST/LOWEST? → Correct ORDER BY direction + LIMIT
 ✅ 3. Column names match schema? (machine_id for filtering, machine_name for display)
 ✅ 4. EGA? → Use AVG(ega_percent) from ega_details_data
@@ -241,3 +244,43 @@ FINAL CHECKLIST BEFORE OUTPUTTING SQL:
 ✅ 11. Metadata machine name (e.g. Robot-1, Filler-6)? → JOIN machines ON machine_id = machines.id
 
 Only after confirming ALL items, output the SQL starting with SELECT.
+
+═══════════════════════════════════════════════════
+WORKED EXAMPLES — STUDY THESE PATTERNS:
+═══════════════════════════════════════════════════
+
+Example 1 — Machine downtime ranking on a date:
+Q: "Which machine had the highest downtime on 2025-05-28?"
+SQL: SELECT machine_id, machine_name, SUM(downtime_mins) AS total_downtime FROM oee_details_data WHERE start_time::date = '2025-05-28' GROUP BY machine_id, machine_name ORDER BY total_downtime DESC LIMIT 1
+
+Example 2 — Total wastage by plant (JOIN):
+Q: "Total wastage in Plant 1 (West Dustin)?"
+SQL: SELECT SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant 1%'
+
+Example 3 — Top N with metadata names (JOIN):
+Q: "Top 3 machines by failed bags on 2025-05-28, show actual machine names."
+SQL: SELECT m.machine_name, SUM(o.failed_bags) AS total_failed_bags FROM oee_details_data o JOIN machines m ON o.machine_id = m.id WHERE o.start_time::date = '2025-05-28' GROUP BY m.machine_name ORDER BY total_failed_bags DESC LIMIT 3
+
+Example 4 — Compare two specific machines:
+Q: "Compare failed bags and downtime for machine 6 and machine 7 on 2025-05-28."
+SQL: SELECT machine_id, machine_name, SUM(failed_bags) AS total_failed_bags, SUM(downtime_mins) AS total_downtime FROM oee_details_data WHERE start_time::date = '2025-05-28' AND machine_id IN (6, 7) GROUP BY machine_id, machine_name ORDER BY machine_id
+
+Example 5 — Best line by wastage inside a plant (3-table JOIN):
+Q: "Which line in Plant 1 had highest wastage?"
+SQL: SELECT l.line_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_lines l ON w.line_id = l.id JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant 1%' GROUP BY l.line_name ORDER BY total_wastage DESC LIMIT 1
+
+Example 6 — Grouping by a custom entity (e.g. grammage or shift):
+Q: "What is the average EGA percent for each grammage size?"
+SQL: SELECT grammage, AVG(ega_percent) AS avg_ega FROM ega_details_data GROUP BY grammage ORDER BY avg_ega DESC
+
+Example 7 — Wastage for a metadata-named machine (JOIN):
+Q: "Total wastage for Robot-1?"
+SQL: SELECT m.machine_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN machines m ON w.machine_id = m.id WHERE m.machine_name ILIKE '%Robot-1%' GROUP BY m.machine_name
+
+Example 8 — Side-by-side line comparison using ILIKE:
+Q: "Total wastage for Line 1-Plant 1 versus Line 2-Plant 1."
+SQL: SELECT l.line_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_lines l ON w.line_id = l.id WHERE l.line_name ILIKE '%Line 1%' OR l.line_name ILIKE '%Line 2%' GROUP BY l.line_name ORDER BY l.line_name
+
+Example 9 — Safely calculating derived percentages (e.g. Quality):
+Q: "What is the quality percentage for all machines?"
+SQL: SELECT machine_id, machine_name, COALESCE((SUM(good_bags) * 100.0) / NULLIF(SUM(good_bags) + SUM(failed_bags), 0), 0) AS quality_percentage FROM oee_details_data GROUP BY machine_id, machine_name ORDER BY quality_percentage DESC

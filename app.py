@@ -74,6 +74,10 @@ async def startup_event():
         active_schema = await semantic_layer.enrich_schema(raw_schema)
 
         db_connector = connector
+        conversation_manager.db = connector
+        await conversation_manager.initialize_db()
+        query_cache.db = connector
+        await query_cache.initialize_db()
         analytics_engine = AnalyticsEngine(connector)
         alert_system = AlertSystem(connector)
         query_generator = ConstraintAwareQueryGenerator(conversation_manager)
@@ -198,6 +202,10 @@ async def connect_database(req: ConnectRequest):
         schema_info = await semantic_layer.enrich_schema(raw_schema)
 
         db_connector = connector
+        conversation_manager.db = connector
+        await conversation_manager.initialize_db()
+        query_cache.db = connector
+        await query_cache.initialize_db()
         active_schema = schema_info
         analytics_engine = AnalyticsEngine(connector)
         alert_system = AlertSystem(connector)
@@ -245,8 +253,34 @@ async def stream_chat(req: QueryRequest):
         return StreamingResponse(fallback_stream(), media_type="text/event-stream")
 
     async def chat_event_generator():
+        # ── GUARDRAILS: Block destructive / injection inputs ──────
+        import re as _re
+        _raw_q = req.query.strip()
+        if len(_raw_q) > 2000:
+            yield format_sse("answer", {"answer": "⚠️ Query is too long. Please keep questions under 2000 characters."})
+            return
+        _BLOCKED = _re.compile(
+            r'\b(DROP|DELETE|TRUNCATE|UPDATE|INSERT|ALTER|CREATE|GRANT|REVOKE|EXEC|EXECUTE)\b',
+            _re.IGNORECASE
+        )
+        if _BLOCKED.search(_raw_q):
+            yield format_sse("answer", {"answer": "⛔ That operation is not allowed. This assistant is read-only."})
+            return
+        _INJECTION = _re.compile(
+            r'(ignore (previous|all) instructions?|you are now|pretend (you are|to be)|forget (everything|your instructions))',
+            _re.IGNORECASE
+        )
+        if _INJECTION.search(_raw_q):
+            yield format_sse("answer", {"answer": "⛔ I can only answer questions about your factory production data."})
+            return
+        # ── END GUARDRAILS ──────────────────────────────
+
+        # Load persistent conversation history from DB
+        await conversation_manager.load_history_from_db(req.session_id)
+
         # --- RECONSTRUCT PRONOUN / CONVERSATIONAL FOLLOW-UP QUERY ---
         q_norm = req.query.strip().lower().rstrip("?.!")
+
         
         # Extended list of follow-up triggers and simple indicators
         followup_phrases = {
@@ -279,7 +313,7 @@ async def stream_chat(req: QueryRequest):
                     logger.info(f"Reconstructed follow-up query: '{req.query}' -> '{reconstructed}'")
                     req.query = reconstructed
 
-        conversation_manager.add_user_message(req.query)
+        await conversation_manager.add_user_message(req.query, session_id=req.session_id)
 
 
         router = QueryRouter(active_schema)
@@ -288,6 +322,48 @@ async def stream_chat(req: QueryRequest):
         suggester = QuerySuggester(active_schema)
 
         intent = router.classify_intent(req.query)
+
+        # --- SEMANTIC QUERY CACHE LOOKUP ---
+        if intent["type"] == "sql_query":
+            try:
+                cached_turn = await query_cache.get_semantic(req.query)
+                if cached_turn:
+                    sql = cached_turn["sql"]
+                    results = cached_turn["results"]
+                    
+                    yield format_sse("pipeline", {
+                        "stage": "table_selection",
+                        "status": "completed",
+                        "tables": [],
+                        "scores": {}
+                    })
+                    yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
+                    yield format_sse("pipeline", {
+                        "stage": "execution",
+                        "status": "completed",
+                        "sql": sql,
+                        "results": results
+                    })
+                    
+                    explanation = await generator.explain_results(
+                        req.query, sql, results, extra_context="[SEMANTIC CACHE HIT]"
+                    )
+                    suggestions = suggester.suggest_followups(req.query, sql, results, [])
+                    
+                    conversation_manager.add_turn(req.session_id, req.query, sql, f"{results.get('row_count', 0)} rows")
+                    await conversation_manager.add_assistant_message(
+                        explanation, sql_query=sql, query_result=results, session_id=req.session_id
+                    )
+                    
+                    yield format_sse("answer", {
+                        "answer": explanation,
+                        "sql": sql,
+                        "results": results,
+                        "suggestions": suggestions
+                    })
+                    return
+            except Exception as e:
+                logger.warning(f"Semantic cache lookup failed: {e}")
 
         # --- REINDEX COMMAND ---
         if intent["type"] == "reindex":
@@ -437,13 +513,8 @@ async def stream_chat(req: QueryRequest):
 
         results = None
         try:
-            cached_result = query_cache.get(sql)
-            if cached_result:
-                results = cached_result
-                logger.info("Cache hit")
-            else:
-                results = await db_connector.execute_query(sql)
-                query_cache.set(sql, results)
+            results = await db_connector.execute_query(sql)
+            await query_cache.set_semantic(req.query, sql, results)
 
             yield format_sse("pipeline", {
                 "stage": "execution",
@@ -476,27 +547,17 @@ async def stream_chat(req: QueryRequest):
         auto_insights = ""
         if analytics_engine and selected_tables:
             try:
-                metric_col = None
-                for table_name in selected_tables:
-                    table = next(
-                        (t for t in active_schema.get("tables", []) if t["name"] == table_name), None
-                    )
-                    if table:
-                        for col in table.get("columns", []):
-                            if any(m in col.get("name", "").lower()
-                                   for m in ["weight", "speed", "cost", "level", "percent"]):
-                                metric_col = col.get("name")
-                                break
-                    if metric_col:
-                        break
+                from analytics_engine import METRIC_COLUMN_MAP, TIME_COLUMN_MAP as AE_TIME_MAP
+                primary_table = selected_tables[0]
+                metric_col = METRIC_COLUMN_MAP.get(primary_table)
                 if metric_col:
-                    from kpi_engine import TIME_COLUMN_MAP
-                    time_col = TIME_COLUMN_MAP.get(selected_tables[0], "created_at")
+                    time_col = AE_TIME_MAP.get(primary_table, "start_time")
                     auto_insights = await analytics_engine.auto_insights(
-                        req.query, selected_tables[0], metric_col, time_column=time_col
+                        req.query, primary_table, metric_col, time_column=time_col
                     )
             except Exception as e:
                 logger.warning(f"Auto insights failed: {e}")
+
 
         try:
             explanation = await generator.explain_results(
@@ -528,8 +589,8 @@ async def stream_chat(req: QueryRequest):
                 else f"{row_count} rows"
             )
             conversation_manager.add_turn(req.session_id, req.query, sql, result_summary)
-            conversation_manager.add_assistant_message(
-                explanation, sql_query=sql, query_result=results
+            await conversation_manager.add_assistant_message(
+                explanation, sql_query=sql, query_result=results, session_id=req.session_id
             )
 
             suggestions = suggester.suggest_followups(req.query, sql, results, selected_tables)
@@ -580,6 +641,161 @@ async def get_insights(table_name: str, metric_column: str):
         "trends": await analytics_engine.detect_trends(table_name, metric_column, time_column=time_col),
         "time_patterns": await analytics_engine.analyze_time_patterns(table_name, metric_column, time_column=time_col)
     }
+
+
+@app.get("/report")
+async def generate_shift_report(shift: str, date: str):
+    if not db_connector:
+        raise HTTPException(status_code=503, detail="Database not connected")
+        
+    catalog = load_catalog()
+    shifts_def = catalog.get("shifts", {})
+    shift_key = None
+    for k, s_def in shifts_def.items():
+        if shift.lower() == k.lower() or shift.lower() in [a.lower() for a in s_def.get("aliases", [])]:
+            shift_key = k
+            break
+            
+    if not shift_key:
+        raise HTTPException(status_code=400, detail=f"Invalid shift name: {shift}")
+        
+    s_def = shifts_def[shift_key]
+    start_time_str = s_def["start"]
+    end_time_str = s_def["end"]
+    
+    from datetime import datetime, timedelta
+    try:
+        report_date = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+        
+    start_ts = datetime.combine(report_date, datetime.strptime(start_time_str, "%H:%M:%S").time())
+    if end_time_str < start_time_str:
+        end_ts = datetime.combine(report_date + timedelta(days=1), datetime.strptime(end_time_str, "%H:%M:%S").time())
+    else:
+        end_ts = datetime.combine(report_date, datetime.strptime(end_time_str, "%H:%M:%S").time())
+        
+    # Format for SQL queries
+    start_ts_str = start_ts.strftime("%Y-%m-%d %H:%M:%S")
+    end_ts_str = end_ts.strftime("%Y-%m-%d %H:%M:%S")
+    
+    try:
+        oee_query = f"""
+            SELECT 
+                COALESCE(SUM(downtime_mins), 0) AS total_downtime,
+                COALESCE(SUM(good_bags), 0) AS total_good_bags,
+                COALESCE(SUM(failed_bags), 0) AS total_failed_bags,
+                COALESCE(SUM(empty_bags), 0) AS total_empty_bags,
+                COALESCE(SUM(overlimit_count), 0) AS total_overlimit,
+                COALESCE(SUM(1), 0) AS total_hours,
+                COALESCE(AVG(target_speed), 0) AS avg_target_speed
+            FROM oee_details_data
+            WHERE start_time >= '{start_ts_str}' AND start_time < '{end_ts_str}'
+        """
+        
+        ega_query = f"""
+            SELECT COALESCE(AVG(ega_percent), 0) AS avg_ega
+            FROM ega_details_data
+            WHERE start_time >= '{start_ts_str}' AND start_time < '{end_ts_str}'
+        """
+        
+        wastage_query = f"""
+            SELECT COALESCE(SUM(wastage_kg), 0) AS total_wastage
+            FROM wastage_records
+            WHERE shift ILIKE '%{shift_key}%' 
+               OR (production_start_time >= '{start_ts_str}' AND production_start_time < '{end_ts_str}')
+        """
+        
+        top_downtime_query = f"""
+            SELECT 
+                o.machine_id,
+                COALESCE(m.machine_name, 'Machine-' || o.machine_id) AS machine_name,
+                SUM(o.downtime_mins) AS downtime
+            FROM oee_details_data o
+            LEFT JOIN machines m ON o.machine_id = m.id
+            WHERE o.start_time >= '{start_ts_str}' AND o.start_time < '{end_ts_str}'
+            GROUP BY o.machine_id, m.machine_name
+            ORDER BY downtime DESC
+            LIMIT 3
+        """
+        
+        top_failed_query = f"""
+            SELECT 
+                o.machine_id,
+                COALESCE(m.machine_name, 'Machine-' || o.machine_id) AS machine_name,
+                SUM(o.failed_bags) AS failed_bags
+            FROM oee_details_data o
+            LEFT JOIN machines m ON o.machine_id = m.id
+            WHERE o.start_time >= '{start_ts_str}' AND o.start_time < '{end_ts_str}'
+            GROUP BY o.machine_id, m.machine_name
+            ORDER BY failed_bags DESC
+            LIMIT 3
+        """
+
+        results = await asyncio.gather(
+            db_connector.execute_query(oee_query),
+            db_connector.execute_query(ega_query),
+            db_connector.execute_query(wastage_query),
+            db_connector.execute_query(top_downtime_query),
+            db_connector.execute_query(top_failed_query)
+        )
+        
+        oee_res = results[0].get("rows", [{}])[0]
+        ega_res = results[1].get("rows", [{}])[0]
+        wastage_res = results[2].get("rows", [{}])[0]
+        top_downtime = results[3].get("rows", [])
+        top_failed = results[4].get("rows", [])
+        
+        # OEE Calculations
+        h = oee_res.get("total_hours", 0)
+        dt = oee_res.get("total_downtime", 0)
+        gb = oee_res.get("total_good_bags", 0)
+        fb = oee_res.get("total_failed_bags", 0)
+        ol = oee_res.get("total_overlimit", 0)
+        ts = oee_res.get("avg_target_speed", 0)
+        
+        availability = 0.0
+        performance = 0.0
+        quality = 0.0
+        oee = 0.0
+        
+        if h > 0:
+            total_mins = h * 60
+            run_mins = total_mins - dt
+            availability = max(0.0, (run_mins / total_mins) * 100)
+            
+            if run_mins > 0 and ts > 0:
+                performance = min(100.0, ((gb / run_mins) / ts) * 100)
+            
+            if gb > 0:
+                quality = max(0.0, (100 - ((ol + fb) / gb) * 100))
+                
+            oee = (availability * performance * quality) / 10000
+            
+        return {
+            "shift": shift_key,
+            "label": s_def.get("label", shift),
+            "date": date,
+            "start_time": start_ts_str,
+            "end_time": end_ts_str,
+            "metrics": {
+                "oee_percent": round(oee, 2),
+                "availability_percent": round(availability, 2),
+                "performance_percent": round(performance, 2),
+                "quality_percent": round(quality, 2),
+                "total_downtime_mins": round(dt, 2),
+                "total_good_bags": int(gb),
+                "total_failed_bags": int(fb),
+                "total_empty_bags": int(oee_res.get("total_empty_bags", 0)),
+                "avg_ega_percent": round(ega_res.get("avg_ega", 0), 2),
+                "total_wastage_kg": round(wastage_res.get("total_wastage", 0), 2)
+            },
+            "top_downtime_machines": top_downtime,
+            "top_failed_machines": top_failed
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate shift report: {str(e)}")
 
 
 @app.get("/conversation/status")
