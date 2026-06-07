@@ -24,9 +24,17 @@ from conversation_manager import ConversationManager
 from constraint_aware_query_generator import ConstraintAwareQueryGenerator
 from nl_filter_parser import NLFilterParser
 from backend.config import settings
+from sql_validator import SQLValidator
+from result_validator import ResultValidator
+from entity_mapper import EntityMapper
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize validators
+sql_validator = SQLValidator()
+result_validator = ResultValidator()
+entity_mapper = EntityMapper()
 
 app = FastAPI(
     title="Production Chatbot Engine",
@@ -448,6 +456,10 @@ async def stream_chat(req: QueryRequest):
 
             enhanced_hints = kpi_data["hints"]
             
+            # Inject entity detection hint BEFORE SQL generation
+            entity_hint = entity_mapper.inject_entity_hint(req.query)
+            enhanced_hints = f"{entity_hint}\n\n{enhanced_hints}"
+            
             # Dynamically inject relationship join hints based on selected_tables!
             if len(selected_tables) > 1:
                 join_hints = []
@@ -495,6 +507,33 @@ async def stream_chat(req: QueryRequest):
 
             if sql != llm_generated_sql:
                 logger.info(f"Constraint validator modified SQL:\nOriginal: {llm_generated_sql}\nModified: {sql}")
+            
+            # ═══════════════════════════════════════════════════════════════
+            # VALIDATE GENERATED SQL BEFORE EXECUTION
+            # ═══════════════════════════════════════════════════════════════
+            is_valid, sql_warnings, corrected_sql = sql_validator.validate(sql, req.query)
+            
+            if sql_warnings:
+                logger.warning(f"SQL Validation Issues:\n" + "\n".join(sql_warnings))
+                
+                # If critical errors, use corrected SQL
+                if not is_valid and corrected_sql != sql:
+                    logger.info(f"Using auto-corrected SQL:\nOriginal: {sql}\nCorrected: {corrected_sql}")
+                    sql = corrected_sql
+                    
+                    # Notify user about auto-fixes
+                    auto_fix_msgs = [w for w in sql_warnings if "AUTO-FIX" in w]
+                    if auto_fix_msgs:
+                        yield format_sse("pipeline", {
+                            "stage": "sql_validation",
+                            "status": "auto_corrected",
+                            "warnings": sql_warnings,
+                            "fixes_applied": auto_fix_msgs
+                        })
+                elif not is_valid and corrected_sql == sql:
+                    # Critical error but no auto-fix could be applied!
+                    # Trigger the LLM to self-heal
+                    raise ValueError(f"SQL Validation Failed: " + " | ".join(sql_warnings))
 
             yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
 
@@ -515,6 +554,41 @@ async def stream_chat(req: QueryRequest):
         try:
             results = await db_connector.execute_query(sql)
             await query_cache.set_semantic(req.query, sql, results)
+            
+            # ═══════════════════════════════════════════════════════════════
+            # VALIDATE QUERY RESULTS FOR IMPOSSIBLE VALUES
+            # ═══════════════════════════════════════════════════════════════
+            query_type = "unknown"
+            q_lower = req.query.lower()
+            if "quality" in q_lower:
+                query_type = "quality"
+            elif "ega" in q_lower or "giveaway" in q_lower:
+                query_type = "ega"
+            elif "availability" in q_lower:
+                query_type = "availability"
+            
+            result_rows = results.get("rows", [])
+            if result_rows:
+                is_result_valid, result_warnings, filtered_rows = result_validator.validate_results(
+                    result_rows, query_type
+                )
+                
+                if result_warnings:
+                    logger.warning(f"Result Validation Issues:\n" + "\n".join(result_warnings))
+                    
+                    # If corrupt data detected, use filtered results
+                    if not is_result_valid and len(filtered_rows) < len(result_rows):
+                        logger.info(f"Filtered {len(result_rows) - len(filtered_rows)} corrupt rows")
+                        results["rows"] = filtered_rows
+                        results["row_count"] = len(filtered_rows)
+                        
+                        yield format_sse("pipeline", {
+                            "stage": "result_validation",
+                            "status": "filtered",
+                            "warnings": result_warnings,
+                            "original_count": len(result_rows),
+                            "filtered_count": len(filtered_rows)
+                        })
 
             yield format_sse("pipeline", {
                 "stage": "execution",

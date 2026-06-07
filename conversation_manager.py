@@ -1,41 +1,93 @@
-# conversation_manager.py — replaces BOTH files
+# conversation_manager.py
 import logging
 import re
+import json
+import asyncio
 from typing import List, Dict, Optional, Any
 from collections import deque
 from datetime import datetime
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-
 class ConversationManager:
     """
-    Single unified conversation manager.
+    Unified conversation manager with PostgreSQL persistent history.
     Handles per-session memory, SQL history, and persistent constraints.
-    Replaces both conversation_memory.py and the old conversation_manager.py.
     """
-
-    def __init__(self, max_history: int = 20, max_turns: int = 3):
+    def __init__(self, db_connector=None, max_history: int = 20, max_turns: int = 3):
+        self.db = db_connector
         self.max_history = max_history
         self.max_turns = max_turns
+        self.db_initialized = False
 
-        # Full conversation history (for context window)
+        # Local cache for rapid access within a request
         self.conversation_history: List[Dict] = []
-
-        # Per-session short-term memory (query, sql, result)
         self.sessions: Dict[str, deque] = {}
-
-        # Persistent constraints — NOT cleared every message
         self.user_constraints: Dict[str, Any] = {}
-
-        # Result cache keyed by SQL
         self.query_results_cache: Dict[str, Dict] = {}
 
-    # ------------------------------------------------------------------
-    # Message Tracking
-    # ------------------------------------------------------------------
+    async def initialize_db(self):
+        """Creates the persistent conversation history table in PostgreSQL."""
+        if not self.db or self.db_initialized:
+            return
+        try:
+            await self.db.execute_write("""
+                CREATE TABLE IF NOT EXISTS conversation_turns (
+                    id SERIAL PRIMARY KEY,
+                    session_id VARCHAR(255),
+                    role VARCHAR(50),
+                    content TEXT,
+                    sql_query TEXT,
+                    query_result JSONB,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            self.db_initialized = True
+            logger.info("✓ Persistent conversation memory table initialized in database.")
+        except Exception as e:
+            logger.error(f"Failed to initialize conversation memory table: {e}")
 
-    def add_user_message(self, message: str):
+    async def load_history_from_db(self, session_id: str):
+        """Load conversation history for this session from PostgreSQL."""
+        if not self.db or not self.db_initialized or not session_id:
+            return
+        try:
+            sql = """
+                SELECT role, content, sql_query, query_result, timestamp
+                FROM conversation_turns
+                WHERE session_id = :session_id
+                ORDER BY timestamp ASC LIMIT :limit
+            """
+            async with self.db.engine.connect() as conn:
+                result = await conn.execute(text(sql), {
+                    "session_id": session_id,
+                    "limit": self.max_history
+                })
+                self.conversation_history = []
+                for row in result.all():
+                    entry = {
+                        "role": row.role,
+                        "content": row.content,
+                        "timestamp": row.timestamp
+                    }
+                    if row.sql_query:
+                        entry["sql_query"] = row.sql_query
+                    if row.query_result:
+                        if isinstance(row.query_result, str):
+                            try:
+                                entry["query_result"] = json.loads(row.query_result)
+                            except Exception:
+                                entry["query_result"] = row.query_result
+                        else:
+                            entry["query_result"] = row.query_result
+                    self.conversation_history.append(entry)
+            logger.info(f"Loaded {len(self.conversation_history)} history turns for session {session_id} from DB.")
+        except Exception as e:
+            logger.warning(f"Could not load conversation history from DB: {e}")
+
+    async def add_user_message(self, message: str, session_id: Optional[str] = None):
+        """Add user message to history and persist to PostgreSQL."""
         self.conversation_history.append({
             "role": "user",
             "content": message,
@@ -44,12 +96,27 @@ class ConversationManager:
         self._extract_constraints(message)
         self._trim_history()
 
-    def add_assistant_message(
+        if self.db and self.db_initialized and session_id:
+            try:
+                sql = """
+                    INSERT INTO conversation_turns (session_id, role, content)
+                    VALUES (:session_id, 'user', :content)
+                """
+                await self.db.execute_write(sql, {
+                    "session_id": session_id,
+                    "content": message
+                })
+            except Exception as e:
+                logger.warning(f"Failed to persist user message to DB: {e}")
+
+    async def add_assistant_message(
         self,
         message: str,
         sql_query: Optional[str] = None,
-        query_result: Optional[Dict] = None
+        query_result: Optional[Dict] = None,
+        session_id: Optional[str] = None
     ):
+        """Add assistant response to history and persist to PostgreSQL."""
         entry = {
             "role": "assistant",
             "content": message,
@@ -65,12 +132,24 @@ class ConversationManager:
         self.conversation_history.append(entry)
         self._trim_history()
 
-    # ------------------------------------------------------------------
-    # Per-Session Short-Term Memory (replaces conversation_memory.py)
-    # ------------------------------------------------------------------
+        if self.db and self.db_initialized and session_id:
+            try:
+                sql = """
+                    INSERT INTO conversation_turns (session_id, role, content, sql_query, query_result)
+                    VALUES (:session_id, 'assistant', :content, :sql_query, :query_result)
+                """
+                res_json = json.dumps(query_result) if query_result else None
+                await self.db.execute_write(sql, {
+                    "session_id": session_id,
+                    "content": message,
+                    "sql_query": sql_query,
+                    "query_result": res_json
+                })
+            except Exception as e:
+                logger.warning(f"Failed to persist assistant message to DB: {e}")
 
     def add_turn(self, session_id: str, user_query: str, sql: str, result_summary: str):
-        """Store a completed query turn for follow-up context."""
+        """Store a completed query turn for follow-up context in memory."""
         if session_id not in self.sessions:
             self.sessions[session_id] = deque(maxlen=self.max_turns)
         self.sessions[session_id].append({
@@ -81,10 +160,7 @@ class ConversationManager:
         logger.info(f"Turn added to session {session_id} ({len(self.sessions[session_id])} turns)")
 
     def get_context(self, session_id: str) -> str:
-        """
-        Get short-term session memory for SQL generator.
-        Used by conversation_memory.get_context() callers.
-        """
+        """Get short-term session memory for SQL generator."""
         if session_id not in self.sessions or not self.sessions[session_id]:
             return ""
 
@@ -101,17 +177,7 @@ class ConversationManager:
             del self.sessions[session_id]
             logger.info(f"Session {session_id} cleared")
 
-    # ------------------------------------------------------------------
-    # Constraint Extraction — PERSISTENT, not cleared every message
-    # ------------------------------------------------------------------
-
     def _extract_constraints(self, message: str):
-        """
-        Extract constraints from message and ADD them.
-        Global preferences (like no_joins) persist, while query-specific
-        constraints (like target_table, operation, time_filter, target_machine, target_variant)
-        are cleared at the start of each turn so they do not leak into unrelated future queries.
-        """
         # Clear query-specific constraints so they don't persist across unrelated turns
         for key in ["target_table", "operation", "time_filter", "target_machine", "target_variant"]:
             self.user_constraints.pop(key, None)
@@ -123,7 +189,6 @@ class ConversationManager:
             self.user_constraints["no_joins"] = True
             logger.info("Constraint set: no_joins=True")
 
-        # Explicit join re-enable
         if any(p in message_lower for p in ["use join", "with join", "allow join", "joins ok"]):
             self.user_constraints.pop("no_joins", None)
             logger.info("Constraint cleared: no_joins")
@@ -152,7 +217,7 @@ class ConversationManager:
         elif "count" in message_lower:
             self.user_constraints["operation"] = "count"
 
-        # Time window — extract and persist
+        # Time window
         time_map = {
             "today": "DATE(timestamp_col) = CURRENT_DATE",
             "yesterday": "DATE(timestamp_col) = CURRENT_DATE - INTERVAL '1 day'",
@@ -181,31 +246,21 @@ class ConversationManager:
             self.user_constraints["target_variant"] = variant_match.group(1).upper()
             logger.info(f"Constraint set: target_variant={self.user_constraints['target_variant']}")
 
-    # ------------------------------------------------------------------
-    # Context Building For LLM
-    # ------------------------------------------------------------------
-
     def get_conversation_context(self, last_n: Optional[int] = None) -> str:
-        """
-        Build full context string for LLM prompt injection.
-        Includes active constraints + recent conversation history.
-        """
         history = self.conversation_history[-last_n:] if last_n else self.conversation_history
         parts = []
 
-        # Active constraints first — most important for SQL generation
         if self.user_constraints:
             parts.append("ACTIVE USER CONSTRAINTS (always respect these):")
             for key, value in self.user_constraints.items():
                 parts.append(f"  - {key}: {value}")
             parts.append("")
 
-        # Recent conversation
         if history:
             parts.append("RECENT CONVERSATION:")
             for entry in history:
                 role = entry["role"].upper()
-                content = entry["content"][:200]  # truncate long messages
+                content = entry["content"][:200]
                 parts.append(f"{role}: {content}")
                 if "sql_query" in entry:
                     parts.append(f"  → SQL: {entry['sql_query'][:150]}")
@@ -214,10 +269,6 @@ class ConversationManager:
                 parts.append("")
 
         return "\n".join(parts)
-
-    # ------------------------------------------------------------------
-    # Utilities
-    # ------------------------------------------------------------------
 
     def get_active_constraints(self) -> Dict[str, Any]:
         return self.user_constraints.copy()

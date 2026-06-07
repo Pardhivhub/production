@@ -84,6 +84,25 @@ class DatabaseConnector:
             logger.error(f"Failed to execute SQL: {sql_query}. Error: {e}")
             raise e
 
+    async def execute_write(self, sql_query: str, params: dict = None) -> dict:
+        """Executes system write queries (bypass guardrail for caching and conversation history)."""
+        if not self.engine:
+            raise RuntimeError("Database not connected. Please connect first.")
+            
+        try:
+            async with self.engine.connect() as conn:
+                if params:
+                    result = await conn.execute(text(sql_query), params)
+                else:
+                    result = await conn.execute(text(sql_query))
+                await conn.commit()
+                return {
+                    "row_count": result.rowcount if hasattr(result, "rowcount") else 0
+                }
+        except Exception as e:
+            logger.error(f"Failed to execute SQL write: {sql_query}. Error: {e}")
+            raise e
+
     async def get_schema_metadata(self) -> dict:
         """Retrieves raw tables and columns to populate the schema and guide the AI."""
         if not self.engine:

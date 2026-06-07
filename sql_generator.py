@@ -34,8 +34,50 @@ class SQLGenerator:
         self.db = db_connector
 
     def sanitize_single_table_query(self, sql: str) -> str:
+        # 1. Clean explanation suffix or unclosed codeblocks
+        sql = re.sub(r"```.*", "", sql, flags=re.DOTALL).strip()
+        # If there's a semicolon followed by explanations, discard the explanation
+        if ";" in sql:
+            for part in sql.split(";"):
+                if "select" in part.lower():
+                    sql = part.strip()
+                    break
+        sql = sql.strip().rstrip(";")
+
+        # 1.5 Enforce GROUP BY columns are in SELECT clause
+        group_by_match = re.search(r"GROUP\s+BY\s+(.*?)(?:ORDER|LIMIT|$)", sql, flags=re.IGNORECASE)
+        if group_by_match:
+            gb_cols = [c.strip() for c in group_by_match.group(1).split(',')]
+            select_match = re.search(r"^SELECT\s+(.*?)FROM", sql, flags=re.IGNORECASE | re.DOTALL)
+            if select_match:
+                select_clause = select_match.group(1)
+                missing_cols = []
+                for col in gb_cols:
+                    clean_col = col.split()[0]
+                    if not re.search(rf"\b{re.escape(clean_col)}\b", select_clause, flags=re.IGNORECASE):
+                        missing_cols.append(clean_col)
+                if missing_cols:
+                    new_select = "SELECT " + ", ".join(missing_cols) + ", "
+                    sql = re.sub(r"^SELECT\s+", new_select, sql, flags=re.IGNORECASE)
+
+        # 2. Fix specific table column issues
+        # wastage_records doesn't have start_time, it has production_start_time
+        if "wastage_records" in sql.lower():
+            sql = re.sub(r"\bstart_time\b", "production_start_time", sql, flags=re.IGNORECASE)
+            
+            # Shift 1/2/3 to A/B/C mapping
+            sql = re.sub(r"\bshift\s*=\s*['\"]Shift\s*1['\"]", "shift = 'A'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*=\s*['\"]Shift\s*2['\"]", "shift = 'B'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*=\s*['\"]Shift\s*3['\"]", "shift = 'C'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*ILIKE\s*['\"]%Shift\s*1%['\"]", "shift = 'A'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*ILIKE\s*['\"]%Shift\s*2%['\"]", "shift = 'B'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*ILIKE\s*['\"]%Shift\s*3%['\"]", "shift = 'C'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*=\s*['\"](?:Morning Shift|Morning)['\"]", "shift = 'A'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*=\s*['\"](?:Afternoon Shift|Afternoon)['\"]", "shift = 'B'", sql, flags=re.IGNORECASE)
+            sql = re.sub(r"\bshift\s*=\s*['\"](?:Night Shift|Night)['\"]", "shift = 'C'", sql, flags=re.IGNORECASE)
+
         sql_upper = sql.upper()
-        # Avoid cleaning queries that have JOIN operations
+        # Avoid cleaning table alias renames if there are JOIN operations
         join_keywords = ["JOIN", "INNER", "LEFT", "RIGHT", "CROSS", "OUTER"]
         if any(re.search(rf"\b{kw}\b", sql_upper) for kw in join_keywords):
             return sql
@@ -111,12 +153,51 @@ class SQLGenerator:
             
             # Add self-correction context if previous attempt failed
             if last_error and last_sql:
+                import re as _re
+                err_lower = last_error.lower()
+                if "undefinedcolumn" in err_lower or ("column" in err_lower and "does not exist" in err_lower):
+                    col_match = _re.search(r'column ["\']?(\S+?)["\']? does not exist', last_error, _re.IGNORECASE)
+                    bad_col = col_match.group(1) if col_match else "unknown"
+                    correction_hint = (
+                        f"ERROR TYPE: UndefinedColumn — column '{bad_col}' does not exist.\n"
+                        f"FIX: Check the DATABASE SCHEMA. Common mistakes:\n"
+                        f"- oee_details_data has NO plant_id or line_id column.\n"
+                        f"- No 'oee' column exists — use downtime_mins, good_bags, failed_bags.\n"
+                        f"- Time column for OEE/EGA is 'start_time', for wastage is 'production_start_time'.\n"
+                        f"- Do NOT join oee_details_data to gmiiot_plants (impossible join)."
+                    )
+                elif "undefinedfunction" in err_lower or "operator does not exist" in err_lower:
+                    correction_hint = (
+                        f"ERROR TYPE: TypeMismatch — you joined or compared columns of incompatible types.\n"
+                        f"FIX: plant_id on gmiiot_plants is INTEGER. "
+                        f"Use ILIKE for text matching. Check JOIN column types match."
+                    )
+                elif "syntax" in err_lower:
+                    correction_hint = (
+                        f"ERROR TYPE: SyntaxError.\n"
+                        f"FIX: Check for missing FROM clause, unmatched parentheses, "
+                        f"missing quotes around string values, or invalid GROUP BY."
+                    )
+                elif "undefinedtable" in err_lower or ("relation" in err_lower and "does not exist" in err_lower):
+                    tbl_match = _re.search(r'relation ["\']?(\S+?)["\']? does not exist', last_error, _re.IGNORECASE)
+                    bad_tbl = tbl_match.group(1) if tbl_match else "unknown"
+                    correction_hint = (
+                        f"ERROR TYPE: UndefinedTable — table '{bad_tbl}' does not exist.\n"
+                        f"FIX: Only use tables listed in the DATABASE SCHEMA above."
+                    )
+                else:
+                    correction_hint = f"ERROR: {last_error[:300]}"
+
                 messages.append({"role": "assistant", "content": last_sql})
                 messages.append({
-                    "role": "user", 
-                    "content": f"That SQL failed with error: {last_error}. Fix it and return ONLY the corrected SQL. DO NOT include any explanations, introduction, markdown code blocks, or conversational text. Start directly with SELECT."
+                    "role": "user",
+                    "content": (
+                        f"Your previous SQL failed. Diagnosis:\n\n{correction_hint}\n\n"
+                        f"BROKEN SQL:\n{last_sql}\n\n"
+                        f"Write the corrected SQL. Return ONLY the SQL starting with SELECT."
+                    )
                 })
-                logger.info(f"Retry attempt {attempt} with self-correction")
+                logger.info(f"Retry {attempt} — self-healing with classified error: {correction_hint[:80]}")
             
             try:
                 response = await acompletion(
@@ -124,7 +205,7 @@ class SQLGenerator:
                     messages=messages,
                     api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
                     temperature=0.0,
-                    timeout=120
+                    timeout=300
                 )
                 sql = response.choices[0].message.content.strip()
                 
@@ -278,7 +359,7 @@ Would you like me to show you available dates or machines?"
                 ],
                 api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
                 temperature=0.3,  # Slightly higher for more creative suggestions
-                timeout=120
+                timeout=300
             )
             explanation = response.choices[0].message.content.strip()
             return explanation
@@ -302,7 +383,7 @@ Would you like me to show you available dates or machines?"
                 messages=[{"role": "user", "content": prompt}],
                 api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
                 temperature=0.3,
-                timeout=120
+                timeout=300
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
@@ -327,7 +408,7 @@ Would you like me to show you available dates or machines?"
                 messages=[{"role": "user", "content": prompt}],
                 api_base=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER == "ollama" else None,
                 temperature=0.3,
-                timeout=120
+                timeout=300
             )
             return response.choices[0].message.content.strip()
         except Exception as e:

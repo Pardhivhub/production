@@ -40,8 +40,8 @@ def _load_table_rules() -> tuple:
     return (
         {"ega_details_data", "oee_details_data", "production_speed_details_data",
          "wastage_records", "gsm_usage_details"},
-        {"flavours", "wastage_reasons"},
-        {"machines", "gmiiot_plants", "gmiiot_lines"},
+        {"employees_list", "shift_assignments"},
+        {"machines", "gmiiot_plants", "gmiiot_lines", "flavours", "wastage_reasons", "recipes"},
     )
 
 PRODUCTION_TABLES, NON_PRODUCTION_TABLES, JOIN_TABLES = _load_table_rules()
@@ -100,6 +100,14 @@ class TableSelector:
             for word in table.get("description", "").lower().split():
                 if len(word) > 3:
                     self._word_to_tables.setdefault(word, []).append(t_name)
+                    
+            # Index categorical data values fetched from db
+            for val in table.get("categorical_values", []):
+                for word in val.lower().split():
+                    # keep >2 length words, strip non-alphanumeric
+                    word = re.sub(r"[^a-z0-9]", "", word)
+                    if len(word) > 2:
+                        self._word_to_tables.setdefault(word, []).append(t_name)
 
             # Index every column
             for col in table.get("columns", []):

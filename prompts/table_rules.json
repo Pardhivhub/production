@@ -11,10 +11,11 @@
   "JOIN_TABLES": [
     "gmiiot_plants",
     "gmiiot_lines",
-    "machines"
+    "machines",
+    "flavours",
+    "wastage_reasons"
   ],
   "NON_PRODUCTION_TABLES": [
-    "flavours", 
     "preset_master_uploader", 
     "application_features",
     "application_group", 
@@ -30,7 +31,6 @@
     "user_role_application_features",
     "user_roles", 
     "users", 
-    "wastage_reasons", 
     "operator_data_entry",
     "production_reconciliation", 
     "line_machines"

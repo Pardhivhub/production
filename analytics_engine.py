@@ -7,6 +7,23 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
+# Maps production tables to their correct timestamp column
+TIME_COLUMN_MAP = {
+    "oee_details_data": "start_time",
+    "ega_details_data": "start_time",
+    "production_speed_details_data": "start_time",
+    "wastage_records": "production_start_time",
+    "gsm_usage_details": "date",
+}
+
+METRIC_COLUMN_MAP = {
+    "oee_details_data": "downtime_mins",
+    "ega_details_data": "ega_percent",
+    "production_speed_details_data": "target_speed",
+    "wastage_records": "wastage_kg",
+    "gsm_usage_details": "gsm",
+}
+
 class AnalyticsEngine:
     """
     Advanced analytics engine for automatic anomaly detection, trend analysis,
@@ -16,13 +33,14 @@ class AnalyticsEngine:
     def __init__(self, db_connector):
         self.db = db_connector
     
-    async def detect_anomalies(self, table: str, metric_column: str, 
-                               time_column: str = "created_at",
+    async def detect_anomalies(self, table: str, metric_column: str,
+                               time_column: str = None,
                                threshold_std: float = 2.5) -> Dict:
         """
         Detect statistical anomalies using Z-score method.
         Returns outlier records that deviate significantly from the mean.
         """
+        time_column = time_column or TIME_COLUMN_MAP.get(table, "start_time")
         try:
             # Fetch recent data
             sql = f"""
@@ -66,12 +84,13 @@ class AnalyticsEngine:
             return {"anomalies": [], "error": str(e)}
     
     async def detect_trends(self, table: str, metric_column: str,
-                           time_column: str = "created_at",
+                           time_column: str = None,
                            window_days: int = 7) -> Dict:
         """
         Detect trends using linear regression on time-series data.
         Returns trend direction, slope, and forecast.
         """
+        time_column = time_column or TIME_COLUMN_MAP.get(table, "start_time")
         try:
             sql = f"""
             SELECT {time_column}, {metric_column}
@@ -247,10 +266,11 @@ class AnalyticsEngine:
             return []
     
     async def analyze_time_patterns(self, table: str, metric_column: str,
-                                   time_column: str = "created_at") -> Dict:
+                                   time_column: str = None) -> Dict:
         """
         Detect hourly/daily patterns (e.g., performance drops at specific hours).
         """
+        time_column = time_column or TIME_COLUMN_MAP.get(table, "start_time")
         try:
             sql = f"""
             SELECT EXTRACT(HOUR FROM {time_column}) as hour,
@@ -297,10 +317,14 @@ class AnalyticsEngine:
             logger.error(f"Time pattern analysis failed: {e}")
             return {"hourly_patterns": [], "error": str(e)}
     
-    async def auto_insights(self, query: str, table: str, metric_column: str, time_column: str = "created_at") -> str:
+    async def auto_insights(self, query: str, table: str, metric_column: str, time_column: str = None) -> str:
         """
         Automatically run multiple analyses and generate insights summary.
         """
+        time_column = time_column or TIME_COLUMN_MAP.get(table, "start_time")
+        # Only run on known production tables
+        if table not in TIME_COLUMN_MAP:
+            return ""
         insights = []
         
         # Run analyses in parallel

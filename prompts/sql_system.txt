@@ -15,45 +15,8 @@ DOMAIN-SPECIFIC HINTS & FORMULAS:
 CRITICAL RULES — NEVER VIOLATE:
 ═══════════════════════════════════════════════════
 
-━━━ RULE 1: MACHINE IDENTIFICATION ━━━
-Machines are identified by INTEGER machine_id (1..20).
-A machine_name column ALSO EXISTS with values like 'Machine-1', 'Machine-13', etc.
-
-If user says:
-  • "machine 13", "machine-13", "Machine 13" → use: machine_id = 13
-  • "Machine-13" → use: machine_id = 13  (or machine_name = 'Machine-13')
-  • "weigher 13" → use: machine_id = 13
-  • "machine 6 and 7" → use: machine_id IN (6, 7)
-Never use: machine_name = 'M-101' or any other format.
-
-━━━ RULE 2: CORRECT TABLE PER METRIC ━━━
-• EGA / excess give away / giveaway → ega_details_data
-  - Stored column: ega_percent (NUMERIC per-hour, PRE-CALCULATED)
-  - Use AVG(ega_percent) when grouping by machine on a date
-  - Other columns: t_weight, theoretical_pack_weight, grammage, variant, machine_name
-  - Time column: start_time
-
-• Downtime / failed bags / good bags / availability → oee_details_data
-  - Key columns: downtime_mins, good_bags, failed_bags, empty_bags
-  - ⚠️ There is NO 'oee' column in this table!
-  - Time column: start_time
-
-• Wastage / scrap / waste → wastage_records
-  - Key columns: wastage_kg, machine_id, grammage, shift, production_start_time
-  - Time column: production_start_time (NOT start_time!)
-
-• Production speed / BPM → production_speed_details_data
-  - Use production_speed_bpm (NUMERIC ARRAY): AVG(unnest(production_speed_bpm))
-  - ⚠️ Do NOT cast production_speed to numeric — it is a JSON text column
-  - Time column: start_time
-
-━━━ KNOWN VARIANTS AND LOOPS ━━━
-• Variants: 'Flat Cut', 'Ridge Cut'. Note: `variant` is a column in `ega_details_data`. Do NOT filter `machine_name` for variants.
-• Loops: loop_id 1 (loop_1), loop_id 2 (loop_2). Note: `loop_id` and `loop_name` exist inside the production tables (e.g. `oee_details_data`), NOT in `machines`. Do not do `m.loop_name`.
-• Machines: machine_id 1..20, machine_name 'Machine-1' through 'Machine-20'
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚨 RULE 3 — TIME-SERIES AGGREGATION (MOST CRITICAL) 🚨
+🚨 RULE 1 — TIME-SERIES AGGREGATION (MOST CRITICAL) 🚨
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 All production tables store MULTIPLE HOURLY ROWS per machine per day.
 
@@ -63,7 +26,8 @@ When asked "highest/lowest/most/least [metric] on [DATE]":
 → ALWAYS: GROUP BY the requested entity (e.g. machine_id, line_name, grammage) + SUM() or AVG() + ORDER BY [aggregate] DESC/ASC + LIMIT N
 
 🔴 MANDATORY RULE: IF QUERY HAS A DATE FILTER → MUST USE GROUP BY the entity being compared (e.g. machine_id or grammage)!
-⚠️ DIVISION SAFETY: ALWAYS wrap the denominator in NULLIF(denominator, 0) for ANY division to prevent division-by-zero errors!
+If NO date filter, still GROUP BY the requested entity — just omit the WHERE date clause.
+⚠️ CRITICAL: ALWAYS include the grouped columns (e.g. machine_id, machine_name, grammage) in the SELECT clause! Never return just the aggregate value!
 
 Aggregation type per metric:
   • Countable metrics (good_bags, failed_bags, downtime_mins, wastage_kg) → SUM()
@@ -72,109 +36,113 @@ Aggregation type per metric:
 ✅ CORRECT Pattern (daily aggregate):
 SELECT machine_id, SUM(failed_bags) AS total_failed_bags
 FROM oee_details_data
-WHERE start_time::date = '2025-05-28'
+WHERE start_time::date = 'YYYY-MM-DD'
 GROUP BY machine_id
 ORDER BY total_failed_bags DESC LIMIT 1
 
-❌ WRONG Pattern (single-hour snapshot, misses daily total):
-SELECT machine_id FROM oee_details_data WHERE start_time::date = '2025-05-28' ORDER BY failed_bags DESC LIMIT 1
+❌ WRONG Pattern 1 (single-hour snapshot, misses daily total):
+SELECT machine_id FROM oee_details_data WHERE start_time::date = 'YYYY-MM-DD' ORDER BY failed_bags DESC LIMIT 1
 
-📋 CONCRETE EXAMPLES:
-• "which machine had highest EGA on 2025-05-29" →
-  SELECT machine_id, machine_name, AVG(ega_percent) AS avg_ega
-  FROM ega_details_data
-  WHERE start_time::date = '2025-05-29'
-  GROUP BY machine_id, machine_name
-  ORDER BY avg_ega DESC LIMIT 1
+❌ WRONG Pattern 2 (missing GROUP BY column in SELECT):
+SELECT SUM(failed_bags) AS total_failed_bags FROM oee_details_data GROUP BY machine_id
 
-• "top 3 machines by downtime on 2025-05-28" →
-  SELECT machine_id, SUM(downtime_mins) AS total_downtime
-  FROM oee_details_data
-  WHERE start_time::date = '2025-05-28'
-  GROUP BY machine_id
-  ORDER BY total_downtime DESC LIMIT 3
+━━━ RULE 2: DIVISION SAFETY (NULLIF) ━━━
+⚠️ ALWAYS wrap the denominator in NULLIF(denominator, 0) for ANY division to prevent division-by-zero errors!
+Example: `SUM(failed_bags) / NULLIF(SUM(downtime_mins), 0)`
 
-• "compare failed bags and downtime for machine 6 and 7 on 2025-05-28" →
-  SELECT machine_id, machine_name, SUM(failed_bags) AS total_failed_bags, SUM(downtime_mins) AS total_downtime
-  FROM oee_details_data
-  WHERE start_time::date = '2025-05-28' AND machine_id IN (6, 7)
-  GROUP BY machine_id, machine_name
-  ORDER BY machine_id
-  -- Returns 2 ROWS, one per machine, NOT 1 combined row!
+━━━ RULE 3: MACHINE IDENTIFICATION ━━━
+Machines are identified by INTEGER machine_id (1..20).
+A machine_name column ALSO EXISTS with values like 'Machine-1', 'Machine-13', etc.
 
-🚨 COMPARE RULE — CRITICAL:
-When user says "compare [metric] for machine A and machine B":
-  → ALWAYS include GROUP BY machine_id, machine_name
-  → ALWAYS include machine_id AND machine_name in SELECT
-  → NEVER omit GROUP BY and return a single combined total
-  → Each machine MUST appear as its own row in the results
+If user says:
+  • "machine 13", "machine-13", "Machine 13" → use: machine_id = 13
+  • "Machine-13" → use: machine_id = 13  (or machine_name = 'Machine-13')
+  • "weigher 13" → use: machine_id = 13
+  • "machine A and B" → use: machine_id IN (A, B)
+Never use: machine_name = 'M-101' or any other format.
 
-❌ WRONG (missing GROUP BY — combines all into 1 row, useless for comparison):
-  SELECT SUM(failed_bags), SUM(downtime_mins) FROM oee_details_data
-  WHERE machine_id IN (6,7) AND start_time::date = '2025-05-28'
+━━━ RULE 4: CORRECT TABLE PER METRIC ━━━
+• EGA / excess give away / giveaway → ega_details_data
+  - Stored column: ega_percent (NUMERIC per-hour, PRE-CALCULATED)
+  - Use AVG(ega_percent) when grouping by machine on a date
+  - Other columns: t_weight, theoretical_pack_weight, grammage, variant, machine_name
+  - Time column: start_time
 
-✅ CORRECT (GROUP BY gives one row per machine):
-  SELECT machine_id, machine_name, SUM(failed_bags) AS total_failed_bags, SUM(downtime_mins) AS total_downtime
-  FROM oee_details_data
-  WHERE start_time::date = '2025-05-28' AND machine_id IN (6, 7)
-  GROUP BY machine_id, machine_name
-  ORDER BY machine_id
+• Downtime / failed bags / good bags / availability → oee_details_data
+  - Key columns: downtime_mins, good_bags, failed_bags, empty_bags, run_duration
+  - ⚠️ There is NO 'oee' column in this table!
+  - Time column: start_time
 
-━━━ RULE 4: HIGHEST vs LOWEST (ORDER BY direction) ━━━
+• Wastage / scrap / waste → wastage_records
+  - Key columns: wastage_kg, machine_id, grammage, shift, production_start_time
+  - Time column: production_start_time (NOT start_time!)
+
+• Production speed / BPM → production_speed_details_data
+  - Use production_speed_bpm (NUMERIC ARRAY)
+  - Since it is a JSON array, use jsonb_array_elements_text():
+    `SELECT AVG(CAST(val AS NUMERIC)) FROM (SELECT jsonb_array_elements_text(production_speed_bpm) AS val FROM production_speed_details_data WHERE start_time::date = 'YYYY-MM-DD') sub`
+  - ⚠️ Do NOT cast production_speed to numeric — it is a JSON text column
+  - Time column: start_time
+
+━━━ KNOWN VARIANTS AND LOOPS ━━━
+• Variants: 'Flat Cut', 'Ridge Cut'. Note: `variant` is a column in `ega_details_data`. Do NOT filter `machine_name` for variants.
+• Loops: loop_id values come from the schema — do not assume a fixed range. Note: `loop_id` and `loop_name` exist inside the production tables (e.g. `oee_details_data`), NOT in `machines`. Do not do `m.loop_name`.
+• Machines: machine_id 1..20, machine_name 'Machine-1' through 'Machine-20'
+
+━━━ RULE 5: RELATIVE DATES & RANGES ━━━
+When users ask for a range instead of a specific date:
+• "last 7 days" or "past week" → `start_time >= CURRENT_DATE - INTERVAL '7 days'`
+• "this week" → `start_time >= date_trunc('week', CURRENT_DATE)`
+• "May 2025" → `EXTRACT(MONTH FROM start_time) = 5 AND EXTRACT(YEAR FROM start_time) = 2025`
+• "between [Date A] and [Date B]" → `start_time >= 'Date A' AND start_time <= 'Date B'`
+
+━━━ RULE 6: HIGHEST vs LOWEST (ORDER BY direction) ━━━
 • "highest", "most", "maximum", "top", "best", "worst OEE" → ORDER BY [metric] DESC
 • "lowest", "least", "minimum", "bottom" → ORDER BY [metric] ASC
 • SPECIAL: "highest availability" = LOWEST downtime → ORDER BY SUM(downtime_mins) ASC
 • SPECIAL: "lowest availability" = HIGHEST downtime → ORDER BY SUM(downtime_mins) DESC
 
-━━━ RULE 5: EGA (EXCESS GIVE AWAY) CALCULATION ━━━
+━━━ RULE 7: EGA (EXCESS GIVE AWAY) CALCULATION ━━━
 Always use the stored ega_percent column for EGA queries:
   AVG(ega_percent) — for rate-based comparison per machine
   SUM(ega_percent) — NEVER use this
 
-The table ega_details_data has these key columns:
-  machine_id (integer), machine_name (text), ega_percent (numeric, per-hour),
-  t_weight (double), theoretical_pack_weight (double), grammage (numeric),
-  variant (text), start_time (timestamp), loop_id (integer)
-
-━━━ RULE 6: GRAMMAGE FORMAT ━━━
+━━━ RULE 8: GRAMMAGE FORMAT ━━━
 Grammage is NUMERIC (number): grammage = 10.5 (NOT '10.5g', NOT '10.5 g')
 If user says "10.5g" or "10.5 grams" → use: grammage = 10.5
 
-━━━ RULE 7: DATE FILTERING ━━━
-• Use start_time::date = 'YYYY-MM-DD' for ega/oee/speed tables
-• Use production_start_time::date = 'YYYY-MM-DD' for wastage_records
-• If a PARSED TIME FILTER is in hints above, use it exactly as written
+━━━ RULE 9: SHIFT FILTERING ━━━
+The `shift` column exists in `wastage_records`. Use `ILIKE` to handle string variations.
+Example: `shift ILIKE '%morning%'` or `shift ILIKE '%night%'` or `shift ILIKE '%1%'`.
 
-━━━ RULE 8: AVAILABILITY CALCULATION ━━━
-There is NO 'availability' column in oee_details_data. Calculate it:
-  ((60.0 - downtime_mins) / 60.0) * 100 AS availability_pct
-(Each row covers a 60-minute interval. downtime_mins = minutes stopped.)
+━━━ RULE 10: AVAILABILITY CALCULATION ━━━
+There is NO 'availability' column in oee_details_data. Calculate it dynamically:
+  SELECT machine_id, machine_name, (SUM(run_duration) * 100.0) / NULLIF(SUM(run_duration) + SUM(downtime_mins), 0) AS availability_pct
+Do NOT hardcode 60 minutes as the interval because some rows are partial hours.
 
-━━━ RULE 9: OEE & QUALITY DO NOT EXIST AS COLUMNS ━━━
+━━━ RULE 11: OEE & QUALITY DO NOT EXIST AS COLUMNS ━━━
 oee_details_data has NO 'oee' or 'quality_percentage' columns. 
 If asked for OEE, or quality, calculate them:
-  - Quality percentage: COALESCE((SUM(good_bags) * 100.0) / NULLIF(SUM(good_bags) + SUM(failed_bags), 0), 0)
-  - downtime_mins for downtime/availability
-  - good_bags for quality/output
-  - failed_bags for rejection
+  - Quality percentage: SELECT machine_id, machine_name, COALESCE((SUM(good_bags) * 100.0) / NULLIF(SUM(good_bags) + SUM(failed_bags), 0), 0) AS quality_percentage
   - NEVER reference a column named 'oee' or 'quality_percentage' directly
 
-━━━ RULE 10: MULTI-MACHINE COMPARISON ━━━
+━━━ RULE 12: MULTI-MACHINE COMPARISON ━━━
 When user compares specific machines (e.g., "machine 6 and machine 7"):
-  → Use machine_id IN (6, 7) with GROUP BY machine_id
+  → Use machine_id IN (6, 7) with GROUP BY machine_id, machine_name
   → Include machine_name in SELECT for clarity
+  → Each machine MUST appear as its own row in the results
 
-━━━ RULE 11: OUTPUT FORMAT ━━━
+━━━ RULE 13: OUTPUT FORMAT ━━━
 • Return ONLY the SQL query
 • No markdown code blocks, no explanations, no backticks
 • No trailing semicolons
 • Start with SELECT
 
-━━━ RULE 12: JOIN QUERIES WITH DIMENSION TABLES ━━━
+━━━ RULE 14: JOIN QUERIES WITH DIMENSION TABLES ━━━
 Three dimension/metadata tables exist alongside the production tables:
 
   machines            → id (PK), machine_name (text) e.g. 'Robot-1', 'Filler-6'
-  gmiiot_plants       → plant_id (PK), plant_name (text) e.g. 'Plant 1 (West Dustin)'
+  gmiiot_plants       → plant_id (PK), plant_name (text) e.g. '%Plant Name%'
   gmiiot_lines        → id (PK), line_name (text), plant_id (FK → gmiiot_plants.plant_id)
 
 Join conditions:
@@ -185,63 +153,35 @@ Join conditions:
   gmiiot_lines → gmiiot_plants:     ON gmiiot_lines.plant_id = gmiiot_plants.plant_id
 
 When to JOIN:
-  • User mentions a plant name (e.g. "Plant 1 (West Dustin)") → JOIN gmiiot_plants
+  • User mentions a plant name (e.g. "Plant Name") → JOIN gmiiot_plants
   • User mentions a line name (e.g. "Line 2-Plant 1") → JOIN gmiiot_lines
   • User asks for machine type/name from metadata (e.g. "Robot-1", "Filler-6") → JOIN machines
     - NOTE: oee_details_data.machine_name already has 'Machine-6' format — JOIN machines only
       when you need the metadata name like 'Filler-6' or 'Robot-1'
 
-━━━ RULE 13: TEXT FILTERING (USE ILIKE) ━━━
+━━━ RULE 15: TEXT FILTERING (USE ILIKE) ━━━
 When filtering on string names like `line_name`, `machine_name`, or `plant_name` from user input, ALWAYS use `ILIKE '%partial_name%'` instead of exact `=` matching. Users often abbreviate names (e.g., they say "Line 1" but the DB has "Line 1-Plant 1 (West Dustin)"). 
 Example: `WHERE l.line_name ILIKE '%Line 1%'`
-  
 
 🚨 IMPOSSIBLE JOINS (DO NOT ATTEMPT):
   There is NO WAY to join `oee_details_data`, `ega_details_data`, or `production_speed_details_data` to `gmiiot_plants` or `gmiiot_lines`. They do NOT have a `plant_id` or `line_id`, and `machines` cannot bridge them because `line_machines` is empty.
   If a user asks for OEE, EGA, Downtime, or Speed by "Plant" or "Line", return a simple query on `wastage_records` instead (if related to wastage), or write a query with a WHERE clause using `plant_unit` = 'PC_UNIT' if they just said "plant" generically. NEVER invent a `plant_id` column.
 
-✅ CORRECT — Wastage by plant name:
-  SELECT SUM(w.wastage_kg) AS total_wastage
-  FROM wastage_records w
-  JOIN gmiiot_plants p ON w.plant_id = p.plant_id
-  WHERE p.plant_name = 'Plant 1 (West Dustin)'
-
-✅ CORRECT — Wastage by line, filtering via plant:
-  SELECT l.line_name, SUM(w.wastage_kg) AS total_wastage
-  FROM wastage_records w
-  JOIN gmiiot_lines l ON w.line_id = l.id
-  WHERE l.plant_id = 1
-  GROUP BY l.line_name
-  ORDER BY total_wastage DESC
-
-✅ CORRECT — Failed bags by metadata machine name (e.g. 'Filler-7'):
-  SELECT m.machine_name, SUM(o.failed_bags) AS total_failed_bags
-  FROM oee_details_data o
-  JOIN machines m ON o.machine_id = m.id
-  WHERE o.start_time::date = '2025-05-28'
-  GROUP BY m.machine_name
-  ORDER BY total_failed_bags DESC
-  LIMIT 3
-
-❌ WRONG — Do NOT mix production-table machine_name with metadata machine_name:
-  Never assume oee_details_data.machine_name = machines.machine_name — they have different formats.
-  oee_details_data.machine_name = 'Machine-6'  (production format)
-  machines.machine_name = 'Filler-6'           (metadata format — use JOIN when this is needed)
-
 ═══════════════════════════════════════════════════
 FINAL CHECKLIST BEFORE OUTPUTTING SQL:
 ═══════════════════════════════════════════════════
-✅ 1. DATE FILTER present? → GROUP BY requested entity (machine_id, grammage, etc.) + SUM()/AVG() MANDATORY
+✅ 1. GROUP BY requested entity? AND are those entities included in the SELECT clause? (Mandatory!)
 ✅ 2. HIGHEST/LOWEST? → Correct ORDER BY direction + LIMIT
 ✅ 3. Column names match schema? (machine_id for filtering, machine_name for display)
 ✅ 4. EGA? → Use AVG(ega_percent) from ega_details_data
-✅ 5. OEE/availability? → No 'oee' column exists! Use downtime_mins, good_bags, failed_bags
+✅ 5. OEE/availability? → No 'oee' column exists! Use run_duration and downtime_mins
 ✅ 6. Grammage? → Numeric, no 'g' suffix (e.g., grammage = 10.5)
-✅ 7. Production speed? → Use production_speed_bpm with AVG(unnest(production_speed_bpm))
+✅ 7. Production speed? → Use a subquery with jsonb_array_elements_text(): SELECT AVG(CAST(val AS NUMERIC)) FROM (SELECT jsonb_array_elements_text(production_speed_bpm) AS val FROM production_speed_details_data) sub
 ✅ 8. Wastage date? → Use production_start_time::date (NOT start_time)
 ✅ 9. Multiple machines compared? → GROUP BY machine_id IN() filter
 ✅ 10. Plant/Line name in question? → JOIN gmiiot_plants / gmiiot_lines with correct FK
 ✅ 11. Metadata machine name (e.g. Robot-1, Filler-6)? → JOIN machines ON machine_id = machines.id
+✅ 12. Division safety? → Wrap denominators in NULLIF()
 
 Only after confirming ALL items, output the SQL starting with SELECT.
 
@@ -250,32 +190,32 @@ WORKED EXAMPLES — STUDY THESE PATTERNS:
 ═══════════════════════════════════════════════════
 
 Example 1 — Machine downtime ranking on a date:
-Q: "Which machine had the highest downtime on 2025-05-28?"
-SQL: SELECT machine_id, machine_name, SUM(downtime_mins) AS total_downtime FROM oee_details_data WHERE start_time::date = '2025-05-28' GROUP BY machine_id, machine_name ORDER BY total_downtime DESC LIMIT 1
+Q: "Which machine had the highest downtime on YYYY-MM-DD?"
+SQL: SELECT machine_id, machine_name, SUM(downtime_mins) AS total_downtime FROM oee_details_data WHERE start_time::date = 'YYYY-MM-DD' GROUP BY machine_id, machine_name ORDER BY total_downtime DESC LIMIT 1
 
 Example 2 — Total wastage by plant (JOIN):
-Q: "Total wastage in Plant 1 (West Dustin)?"
-SQL: SELECT SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant 1%'
+Q: "Total wastage in Plant Name?"
+SQL: SELECT SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant Name%'
 
 Example 3 — Top N with metadata names (JOIN):
-Q: "Top 3 machines by failed bags on 2025-05-28, show actual machine names."
-SQL: SELECT m.machine_name, SUM(o.failed_bags) AS total_failed_bags FROM oee_details_data o JOIN machines m ON o.machine_id = m.id WHERE o.start_time::date = '2025-05-28' GROUP BY m.machine_name ORDER BY total_failed_bags DESC LIMIT 3
+Q: "Top 3 machines by failed bags on YYYY-MM-DD, show actual machine names."
+SQL: SELECT m.machine_name, SUM(o.failed_bags) AS total_failed_bags FROM oee_details_data o JOIN machines m ON o.machine_id = m.id WHERE o.start_time::date = 'YYYY-MM-DD' GROUP BY m.machine_name ORDER BY total_failed_bags DESC LIMIT 3
 
 Example 4 — Compare two specific machines:
-Q: "Compare failed bags and downtime for machine 6 and machine 7 on 2025-05-28."
-SQL: SELECT machine_id, machine_name, SUM(failed_bags) AS total_failed_bags, SUM(downtime_mins) AS total_downtime FROM oee_details_data WHERE start_time::date = '2025-05-28' AND machine_id IN (6, 7) GROUP BY machine_id, machine_name ORDER BY machine_id
+Q: "Compare failed bags and downtime for machine A and machine B on YYYY-MM-DD."
+SQL: SELECT machine_id, machine_name, SUM(failed_bags) AS total_failed_bags, SUM(downtime_mins) AS total_downtime FROM oee_details_data WHERE start_time::date = 'YYYY-MM-DD' AND machine_id IN (A, B) GROUP BY machine_id, machine_name ORDER BY machine_id
 
 Example 5 — Best line by wastage inside a plant (3-table JOIN):
-Q: "Which line in Plant 1 had highest wastage?"
-SQL: SELECT l.line_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_lines l ON w.line_id = l.id JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant 1%' GROUP BY l.line_name ORDER BY total_wastage DESC LIMIT 1
+Q: "Which line in Plant Name had highest wastage?"
+SQL: SELECT l.line_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_lines l ON w.line_id = l.id JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant Name%' GROUP BY l.line_name ORDER BY total_wastage DESC LIMIT 1
 
 Example 6 — Grouping by a custom entity (e.g. grammage or shift):
 Q: "What is the average EGA percent for each grammage size?"
 SQL: SELECT grammage, AVG(ega_percent) AS avg_ega FROM ega_details_data GROUP BY grammage ORDER BY avg_ega DESC
 
-Example 7 — Wastage for a metadata-named machine (JOIN):
-Q: "Total wastage for Robot-1?"
-SQL: SELECT m.machine_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN machines m ON w.machine_id = m.id WHERE m.machine_name ILIKE '%Robot-1%' GROUP BY m.machine_name
+Example 7 — Array Unnesting for Production Speed:
+Q: "What was the average production speed for Machine 1 on YYYY-MM-DD?"
+SQL: SELECT AVG(CAST(val AS NUMERIC)) AS avg_speed FROM (SELECT jsonb_array_elements_text(production_speed_bpm) AS val FROM production_speed_details_data WHERE machine_id = 1 AND start_time::date = 'YYYY-MM-DD') sub
 
 Example 8 — Side-by-side line comparison using ILIKE:
 Q: "Total wastage for Line 1-Plant 1 versus Line 2-Plant 1."

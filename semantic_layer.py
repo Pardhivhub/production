@@ -55,7 +55,8 @@ class SemanticLayer:
             enriched_table = {
                 **table,
                 "description": table_desc,
-                "columns": enriched_columns
+                "columns": enriched_columns,
+                "categorical_values": await self._fetch_categorical_values(table_name, table.get("columns", []))
             }
             
             self.cache[table_name] = enriched_table
@@ -63,6 +64,30 @@ class SemanticLayer:
         
         return enriched_schema
     
+    async def _fetch_categorical_values(self, table_name: str, columns: List[Dict]) -> List[str]:
+        """Fetch distinct values for text columns that might be categorical."""
+        categorical_vals = []
+        for col in columns:
+            col_type = col.get("type", "").lower()
+            col_name = col.get("name", "").lower()
+            if "char" in col_type or "text" in col_type or "string" in col_type:
+                # Exclude columns that are likely unique IDs or timestamps
+                if "id" in col_name and not col_name.endswith("_id"):
+                    continue
+                if col_name in ["created_at", "updated_at", "timestamp"]:
+                    continue
+                try:
+                    # Get top 50 distinct values
+                    query = f"SELECT DISTINCT {col_name} FROM {table_name} WHERE {col_name} IS NOT NULL LIMIT 50"
+                    res = await self.db.execute_query(query)
+                    for row in res.get("rows", []):
+                        val = row.get(col.get("name"))
+                        if val and isinstance(val, str) and len(val) > 2:
+                            categorical_vals.append(val)
+                except Exception as e:
+                    logger.debug(f"Failed to fetch categorical values for {table_name}.{col_name}: {e}")
+        return list(set(categorical_vals))
+
     async def _generate_table_description(self, table: Dict) -> str:
         """
         Generate a business-friendly table description programmatically.

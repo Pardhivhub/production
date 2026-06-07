@@ -4,7 +4,7 @@ from typing import Optional
 class Settings(BaseSettings):
     # LLM Settings
     LLM_PROVIDER: str = "ollama"
-    LLM_MODEL: str = "llama3.1:8b"
+    LLM_MODEL: str = "llama3.2:3b"
     LLM_API_KEY: Optional[str] = None
     OLLAMA_BASE_URL: str = "http://localhost:11434"
 
