@@ -1,0 +1,3 @@
+Example 3 — Top N with metadata names (JOIN):
+Q: "Top 3 machines by failed bags on YYYY-MM-DD, show actual machine names."
+SQL: SELECT m.machine_name, SUM(o.failed_bags) AS total_failed_bags FROM oee_details_data o JOIN machines m ON o.machine_id = m.id WHERE o.start_time::date = 'YYYY-MM-DD' GROUP BY m.machine_name ORDER BY total_failed_bags DESC LIMIT 3

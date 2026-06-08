@@ -163,9 +163,12 @@ When to JOIN:
 When filtering on string names like `line_name`, `machine_name`, or `plant_name` from user input, ALWAYS use `ILIKE '%partial_name%'` instead of exact `=` matching. Users often abbreviate names (e.g., they say "Line 1" but the DB has "Line 1-Plant 1 (West Dustin)"). 
 Example: `WHERE l.line_name ILIKE '%Line 1%'`
 
-🚨 IMPOSSIBLE JOINS (DO NOT ATTEMPT):
-  There is NO WAY to join `oee_details_data`, `ega_details_data`, or `production_speed_details_data` to `gmiiot_plants` or `gmiiot_lines`. They do NOT have a `plant_id` or `line_id`, and `machines` cannot bridge them because `line_machines` is empty.
-  If a user asks for OEE, EGA, Downtime, or Speed by "Plant" or "Line", return a simple query on `wastage_records` instead (if related to wastage), or write a query with a WHERE clause using `plant_unit` = 'PC_UNIT' if they just said "plant" generically. NEVER invent a `plant_id` column.
+━━━ RULE 16: JOINING OEE/EGA/SPEED TO LINES & PLANTS ━━━
+Although the time-series tables (`oee_details_data`, `ega_details_data`, `production_speed_details_data`) do not have `plant_id` or `line_id` columns, they DO have a `loop_id` column. 
+- `loop_id` maps directly to the line ID (`gmiiot_lines.id`).
+- Therefore, you CAN join these tables to plants/lines using:
+  `FROM oee_details_data o JOIN gmiiot_lines l ON o.loop_id = l.id JOIN gmiiot_plants p ON l.plant_id = p.plant_id`
+- Use this join whenever the user asks for OEE, EGA, Downtime, Speed, or failed/good bags by "Line" or "Plant". Do not fallback to `wastage_records` for OEE/EGA/Speed queries unless wastage is specifically requested.
 
 ═══════════════════════════════════════════════════
 FINAL CHECKLIST BEFORE OUTPUTTING SQL:

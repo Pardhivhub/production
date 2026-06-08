@@ -1,0 +1,3 @@
+Example 7 — Array Unnesting for Production Speed:
+Q: "What was the average production speed for Machine 1 on YYYY-MM-DD?"
+SQL: SELECT AVG(CAST(val AS NUMERIC)) AS avg_speed FROM (SELECT jsonb_array_elements_text(production_speed_bpm) AS val FROM production_speed_details_data WHERE machine_id = 1 AND start_time::date = 'YYYY-MM-DD') sub

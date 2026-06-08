@@ -9,24 +9,15 @@ from typing import Optional, List
 from pathlib import Path
 
 import os
-from db_connector import DatabaseConnector
-from kpi_engine import KPIEngine
-from sql_generator import SQLGenerator
-from router import QueryRouter
-from table_selector import TableSelector
-from rag_explorer import RAGExplorer
-from query_cache import QueryCache
-from analytics_engine import AnalyticsEngine
-from query_suggester import QuerySuggester
-from semantic_layer import SemanticLayer
-from alert_system import AlertSystem
-from conversation_manager import ConversationManager
-from constraint_aware_query_generator import ConstraintAwareQueryGenerator
-from nl_filter_parser import NLFilterParser
+from database import DatabaseConnector, SemanticLayer
+from kpi_and_router import KPIEngine, QueryRouter, QuerySuggester
+from sql_generation import SQLGenerator, ConstraintAwareQueryGenerator, NLFilterParser
+from search_and_rag import TableSelector, RAGExplorer
+from cache_and_memory import QueryCache, ConversationManager
+from analytics_and_alerts import AnalyticsEngine, AlertSystem
 from backend.config import settings
-from sql_validator import SQLValidator
-from result_validator import ResultValidator
-from entity_mapper import EntityMapper
+from validation import SQLValidator, ResultValidator, EntityMapper
+from log_stream import log_streamer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -484,7 +475,7 @@ async def stream_chat(req: QueryRequest):
             resolved_time_col = "unix_timestamp"
             if selected_tables:
                 primary_tbl = selected_tables[0]
-                from kpi_engine import TIME_COLUMN_MAP
+                from kpi_and_router import TIME_COLUMN_MAP
                 resolved_time_col = TIME_COLUMN_MAP.get(primary_tbl, "timestamp")
 
             # Parse temporal filters using NLFilterParser
@@ -621,7 +612,7 @@ async def stream_chat(req: QueryRequest):
         auto_insights = ""
         if analytics_engine and selected_tables:
             try:
-                from analytics_engine import METRIC_COLUMN_MAP, TIME_COLUMN_MAP as AE_TIME_MAP
+                from analytics_and_alerts import METRIC_COLUMN_MAP, TIME_COLUMN_MAP as AE_TIME_MAP
                 primary_table = selected_tables[0]
                 metric_col = METRIC_COLUMN_MAP.get(primary_table)
                 if metric_col:
@@ -701,12 +692,24 @@ async def get_alerts():
         all_alerts.extend(alerts)
     return {"alerts": all_alerts, "count": len(all_alerts)}
 
+@app.get("/api/logs")
+async def stream_logs():
+    q = log_streamer.subscribe()
+    async def log_generator():
+        try:
+            while True:
+                msg = await q.get()
+                yield format_sse("log", {"message": msg})
+        finally:
+            log_streamer.unsubscribe(q)
+    return StreamingResponse(log_generator(), media_type="text/event-stream")
+
 
 @app.get("/insights/{table_name}/{metric_column}")
 async def get_insights(table_name: str, metric_column: str):
     if not analytics_engine:
         raise HTTPException(status_code=503, detail="Analytics engine not initialized")
-    from kpi_engine import TIME_COLUMN_MAP
+    from kpi_and_router import TIME_COLUMN_MAP
     time_col = TIME_COLUMN_MAP.get(table_name, "created_at")
     return {
         "table": table_name,
@@ -958,7 +961,7 @@ async def update_system_prompt(data: PromptData):
     prompt_path = Path(__file__).parent / "prompts" / "sql_system.txt"
     try:
         prompt_path.write_text(data.content, encoding="utf-8")
-        from sql_generator import reload_prompts
+        from sql_generation import reload_prompts
         reload_prompts()
         return {"status": "success", "message": "Prompt updated and AI reloaded."}
     except Exception as e:

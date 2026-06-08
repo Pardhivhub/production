@@ -3,14 +3,11 @@ import json
 import logging
 import os
 from backend.config import settings
-from db_connector import DatabaseConnector
-from kpi_engine import KPIEngine
-from sql_generator import SQLGenerator
-from router import QueryRouter
-from table_selector import TableSelector
-from rag_explorer import RAGExplorer
-from conversation_manager import ConversationManager
-from query_cache import QueryCache
+from database import DatabaseConnector
+from kpi_and_router import KPIEngine, QueryRouter
+from sql_generation import SQLGenerator
+from search_and_rag import TableSelector, RAGExplorer
+from cache_and_memory import ConversationManager, QueryCache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

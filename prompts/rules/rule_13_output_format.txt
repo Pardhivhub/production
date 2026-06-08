@@ -1,0 +1,5 @@
+━━━ RULE 13: OUTPUT FORMAT ━━━
+- Return ONLY the SQL query
+- No markdown code blocks, no explanations, no backticks
+- No trailing semicolons
+- Start with SELECT

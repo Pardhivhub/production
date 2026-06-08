@@ -1506,6 +1506,33 @@
                        backdrop-filter: blur(10px); transition: all 0.2s ease;">
             <span style="font-size:18px">⚙️</span> Rules Manager
         </button>
+        <button onclick="document.getElementById('backend-console-panel').style.display='flex'; scrollConsoleToBottom();" 
+                style="padding:12px 20px;
+                       border-radius:12px;background:var(--bg-card);color:var(--text-main);
+                       border:1px solid rgba(255,255,255,0.1);cursor:pointer;
+                       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                       display:flex;align-items:center;gap:8px;font-weight:600;
+                       backdrop-filter: blur(10px); transition: all 0.2s ease;">
+            <span style="font-size:18px">💻</span> Backend Console
+        </button>
+    </div>
+
+    <!-- Backend Console Panel -->
+    <div id="backend-console-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:2000;justify-content:center;align-items:center;">
+        <div style="background:#05070a; border: 1px solid var(--primary); border-radius:16px; width:85%; max-width:1000px; height:80vh; display:flex; flex-direction:column; box-shadow: 0 10px 40px rgba(0,240,255,0.2);">
+            <div style="padding:15px 24px; border-bottom: 1px solid rgba(0,240,255,0.2); background: rgba(0,240,255,0.05); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                <h2 style="font-size:1.1rem; display:flex; align-items:center; gap:10px; color:var(--primary); font-family:'JetBrains Mono', monospace;">
+                    <span>>_</span> LLM Execution Logs
+                </h2>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="document.getElementById('backend-console-output').innerHTML='<div style=\'color:#9ece6a;\'>// Console cleared.</div>'" style="background:none; border:1px solid rgba(255,255,255,0.2); color:white; cursor:pointer; padding: 4px 10px; border-radius:4px; font-size:11px;">Clear</button>
+                    <button onclick="document.getElementById('backend-console-panel').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.5rem; line-height:1;">&times;</button>
+                </div>
+            </div>
+            <div id="backend-console-output" style="flex:1; padding:20px; overflow-y:auto; font-family:'JetBrains Mono', monospace; font-size:12px; line-height:1.5; color:#a9b1d6; display:flex; flex-direction:column; gap:10px; background:#1a1b26;">
+                <div style="color:#9ece6a;">// Backend connection established. Waiting for logs...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Rules Manager Panel -->
@@ -1513,7 +1540,7 @@
         <div style="background:var(--bg-base); border: 1px solid var(--border-color); border-radius:16px; width:80%; max-width:900px; max-height:85vh; display:flex; flex-direction:column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
             
             <!-- Header -->
-            <div style="padding:20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+            <div style="padding:20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                 <h2 style="font-size:1.2rem; display:flex; align-items:center; gap:10px;">
                     <span style="color:var(--primary)">⚙️</span> Rules Manager
                 </h2>
@@ -1521,7 +1548,7 @@
             </div>
 
             <!-- Tabs -->
-            <div style="display:flex; border-bottom: 1px solid var(--border-color); padding: 0 24px; gap: 20px; overflow-x: auto;">
+            <div style="display:flex; flex-shrink:0; border-bottom: 1px solid var(--border-color); padding: 0 24px; gap: 20px; overflow-x: auto;">
                 <button class="rule-tab active" onclick="switchTab('formulas')" style="background:none; border:none; padding:15px 0; color:var(--primary); border-bottom: 2px solid var(--primary); font-weight:600; cursor:pointer;">KPI Formulas</button>
                 <button class="rule-tab" onclick="switchTab('shifts')" style="background:none; border:none; padding:15px 0; color:var(--text-muted); cursor:pointer;">Shifts</button>
                 <button class="rule-tab" onclick="switchTab('relationships')" style="background:none; border:none; padding:15px 0; color:var(--text-muted); cursor:pointer;">Relationships</button>
@@ -1632,7 +1659,7 @@
                 </div>
             </div>
             
-            <div style="padding:15px 24px; border-top: 1px solid var(--border-color); font-size:0.8rem; color:var(--text-muted); text-align:center;">
+            <div style="padding:15px 24px; border-top: 1px solid var(--border-color); font-size:0.8rem; color:var(--text-muted); text-align:center; flex-shrink:0;">
                 Changes are saved instantly to <code>config/kpi_catalog.json</code> and applied live.
             </div>
         </div>
@@ -1643,7 +1670,7 @@
         <div style="background:var(--bg-base); border: 1px solid var(--border-color); border-radius:16px; width:90%; max-width:1000px; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
             
             <!-- Header -->
-            <div style="padding:20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+            <div style="padding:20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                 <h2 style="font-size:1.2rem; display:flex; align-items:center; gap:10px;">
                     <span style="color:var(--primary)">📋</span> Shift Performance Report
                 </h2>
@@ -1651,7 +1678,7 @@
             </div>
 
             <!-- Parameters Selector -->
-            <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-color); display:flex; gap:15px; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.01);">
+            <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-color); display:flex; gap:15px; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.01); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <label for="report-date" style="font-size:12px; color:var(--text-muted); font-weight:500;">Date:</label>
                     <input type="date" id="report-date" class="rule-input" style="padding: 6px 12px; max-width: 160px;">
@@ -1685,11 +1712,14 @@
                 el.style.color = 'var(--text-muted)';
                 el.style.borderBottom = 'none';
                 el.classList.remove('active');
+                
+                const onclickAttr = el.getAttribute('onclick') || '';
+                if (onclickAttr.includes(`'${tabId}'`) || onclickAttr.includes(`"${tabId}"`)) {
+                    el.style.color = 'var(--primary)';
+                    el.style.borderBottom = '2px solid var(--primary)';
+                    el.classList.add('active');
+                }
             });
-            const activeTab = document.querySelector(`.rule-tab[onclick="switchTab('${tabId}')"]`);
-            activeTab.style.color = 'var(--primary)';
-            activeTab.style.borderBottom = '2px solid var(--primary)';
-            activeTab.classList.add('active');
         }
 
         async function loadRules() {
@@ -2180,6 +2210,35 @@ ${fbText || '   None'}
                 }
             };
         })();
+
+        // Setup EventSource for Backend Logs
+        const logSource = new EventSource('/api/logs');
+        logSource.addEventListener('log', function(e) {
+            const data = JSON.parse(e.data);
+            const consoleOutput = document.getElementById('backend-console-output');
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            logEntry.style.paddingBottom = '10px';
+            logEntry.style.whiteSpace = 'pre-wrap';
+            
+            let msg = data.message;
+            if(msg.includes('🚀 [SENDING TO LLM')) {
+                logEntry.style.color = '#7aa2f7'; // Blueish
+            } else if(msg.includes('✅ [RECEIVED FROM LLM')) {
+                logEntry.style.color = '#bb9af7'; // Purpleish
+            }
+            
+            logEntry.textContent = msg;
+            consoleOutput.appendChild(logEntry);
+            
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        });
+
+        function scrollConsoleToBottom() {
+            const consoleOutput = document.getElementById('backend-console-output');
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
     </script>
 
 </body>

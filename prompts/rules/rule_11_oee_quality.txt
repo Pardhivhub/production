@@ -1,0 +1,3 @@
+━━━ RULE 11: OEE & QUALITY DO NOT EXIST AS COLUMNS ━━━
+oee_details_data has NO 'oee' or 'quality_percentage' columns. Calculate them:
+- Quality percentage: SELECT machine_id, machine_name, COALESCE((SUM(good_bags) * 100.0) / NULLIF(SUM(good_bags) + SUM(failed_bags), 0), 0) AS quality_percentage

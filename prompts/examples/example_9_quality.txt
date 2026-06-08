@@ -1,0 +1,3 @@
+Example 9 — Safely calculating derived percentages (e.g. Quality):
+Q: "What is the quality percentage for all machines?"
+SQL: SELECT machine_id, machine_name, COALESCE((SUM(good_bags) * 100.0) / NULLIF(SUM(good_bags) + SUM(failed_bags), 0), 0) AS quality_percentage FROM oee_details_data GROUP BY machine_id, machine_name ORDER BY quality_percentage DESC

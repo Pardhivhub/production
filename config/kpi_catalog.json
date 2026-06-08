@@ -687,5 +687,17 @@
         "overnight shift"
       ]
     }
-  }
+  },
+  "exclude_column_words": [
+    "variant",
+    "loop",
+    "id",
+    "uuid",
+    "name",
+    "time",
+    "date",
+    "start_time",
+    "end_time",
+    "shift"
+  ]
 }

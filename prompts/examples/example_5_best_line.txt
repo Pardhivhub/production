@@ -1,0 +1,3 @@
+Example 5 — Best line by wastage inside a plant (3-table JOIN):
+Q: "Which line in Plant Name had highest wastage?"
+SQL: SELECT l.line_name, SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_lines l ON w.line_id = l.id JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant Name%' GROUP BY l.line_name ORDER BY total_wastage DESC LIMIT 1

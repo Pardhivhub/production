@@ -1,0 +1,6 @@
+━━━ RULE 17: CROSS-GRAIN METRIC RATIOS (CTEs) ━━━
+When asked to compare or calculate ratios of metrics from tables with different temporal/entity granularities (e.g., ratio of `wastage_records` to `oee_details_data` or `ega_details_data`):
+1. NEVER join the tables directly in a simple JOIN. Due to different row granularities (e.g., shift-level vs hourly), a direct join will cause a "fan-out" Cartesian product and multiply sum values incorrectly.
+2. ALWAYS aggregate each metric separately in subqueries or Common Table Expressions (CTEs).
+3. Combine the aggregated values in the outer query and divide using NULLIF to prevent division-by-zero errors.
+4. Wrap all aggregates in COALESCE(..., 0) so the query behaves correctly when data is missing for one of the metrics.

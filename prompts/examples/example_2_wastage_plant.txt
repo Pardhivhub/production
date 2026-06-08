@@ -1,0 +1,3 @@
+Example 2 — Total wastage by plant (JOIN):
+Q: "Total wastage in Plant Name?"
+SQL: SELECT SUM(w.wastage_kg) AS total_wastage FROM wastage_records w JOIN gmiiot_plants p ON w.plant_id = p.plant_id WHERE p.plant_name ILIKE '%Plant Name%'

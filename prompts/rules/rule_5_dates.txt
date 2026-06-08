@@ -1,0 +1,6 @@
+━━━ RULE 5: RELATIVE DATES & RANGES ━━━
+When users ask for a range instead of a specific date:
+- "last 7 days" or "past week" -> start_time >= CURRENT_DATE - INTERVAL '7 days'
+- "this week" -> start_time >= date_trunc('week', CURRENT_DATE)
+- "May 2025" -> EXTRACT(MONTH FROM start_time) = 5 AND EXTRACT(YEAR FROM start_time) = 2025
+- "between [Date A] and [Date B]" -> start_time >= 'Date A' AND start_time <= 'Date B'

@@ -1,0 +1,5 @@
+━━━ RULE 6: HIGHEST vs LOWEST (ORDER BY direction) ━━━
+- "highest", "most", "maximum", "top", "best", "worst OEE" -> ORDER BY [metric] DESC
+- "lowest", "least", "minimum", "bottom" -> ORDER BY [metric] ASC
+- "highest availability" = LOWEST downtime -> ORDER BY SUM(downtime_mins) ASC
+- "lowest availability" = HIGHEST downtime -> ORDER BY SUM(downtime_mins) DESC

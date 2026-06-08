@@ -1,0 +1,9 @@
+🚨 RULE 1 — TIME-SERIES AGGREGATION (MOST CRITICAL) 🚨
+All production tables store MULTIPLE HOURLY ROWS per machine per day.
+⚠️ NEVER query a single row to find daily results — always aggregate.
+When asked "highest/lowest/most/least [metric] on [DATE]":
+→ ALWAYS: GROUP BY the requested entity (e.g. machine_id, line_name, grammage) + SUM() or AVG() + ORDER BY [aggregate] DESC/ASC + LIMIT N
+Mandatory rule: If query has a date filter, must use GROUP BY the entity being compared.
+Aggregation type per metric:
+- Countable metrics (good_bags, failed_bags, downtime_mins, wastage_kg) -> SUM()
+- Rate metrics (ega_percent, oee) -> AVG()

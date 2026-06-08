@@ -1,0 +1,3 @@
+━━━ RULE 2: DIVISION SAFETY (NULLIF) ━━━
+⚠️ ALWAYS wrap the denominator in NULLIF(denominator, 0) for ANY division to prevent division-by-zero errors!
+Example: `SUM(failed_bags) / NULLIF(SUM(downtime_mins), 0)`

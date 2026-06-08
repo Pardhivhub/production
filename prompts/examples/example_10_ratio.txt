@@ -1,0 +1,3 @@
+Example 10 — Ratio of wastage to good bags:
+Q: "For Machine 4 on YYYY-MM-DD, what was the ratio of total wastage (kg) to total good bags produced?"
+SQL: WITH waste AS (SELECT COALESCE(SUM(wastage_kg), 0) AS total_wastage FROM wastage_records WHERE machine_id = 4 AND production_start_time::date = 'YYYY-MM-DD'), good AS (SELECT COALESCE(SUM(good_bags), 0) AS total_good_bags FROM oee_details_data WHERE machine_id = 4 AND start_time::date = 'YYYY-MM-DD') SELECT COALESCE(waste.total_wastage, 0) / NULLIF(COALESCE(good.total_good_bags, 0), 0) AS ratio FROM waste, good
