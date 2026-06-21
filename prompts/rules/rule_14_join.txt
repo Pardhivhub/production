@@ -1,9 +1,0 @@
-━━━ RULE 14: JOIN QUERIES WITH DIMENSION TABLES ━━━
-Three dimension/metadata tables exist alongside the production tables:
-- machines -> id (PK), machine_name (text) e.g. 'Robot-1', 'Filler-6'
-- gmiiot_plants -> plant_id (PK), plant_name (text)
-- gmiiot_lines -> id (PK), line_name (text), plant_id (FK -> gmiiot_plants.plant_id)
-When to JOIN:
-- User mentions a plant name -> JOIN gmiiot_plants
-- User mentions a line name -> JOIN gmiiot_lines
-- User asks for machine type/name from metadata -> JOIN machines

@@ -1,4 +1,0 @@
-━━━ RULE 7: EGA (EXCESS GIVE AWAY) CALCULATION ━━━
-Always use the stored ega_percent column for EGA queries:
-- AVG(ega_percent) for rate-based comparison per machine
-- NEVER use SUM(ega_percent)

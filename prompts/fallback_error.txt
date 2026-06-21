@@ -6,7 +6,7 @@ Technical Issue: "{error_msg}"
 
 Instructions:
 1. Translate this technical issue into a warm, friendly, plain English response that an ordinary factory manager can understand.
-2. DO NOT mention database tables, columns, rows, SQL, code, or technical variables. Speak purely in terms of business concepts (OEE, wastage, silos, feeders, client orders, etc.).
+2. DO NOT mention database tables, columns, rows, SQL, code, or technical variables. Speak purely in terms of business concepts (OEE, wastage, machines, bags, production lines, variants, etc.).
 3. Explain simply what went wrong (e.g., if a column or relation didn't exist, explain that we couldn't match or find records for that specific combination or aspect of data).
 4. Ask a polite, business-oriented clarifying question to help us get the correct information (e.g., "Could you please clarify what specific metric or machine you would like to analyze?").
 5. Keep your response extremely brief, polite, and under 50 words.

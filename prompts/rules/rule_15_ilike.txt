@@ -1,3 +1,0 @@
-━━━ RULE 15: TEXT FILTERING (USE ILIKE) ━━━
-When filtering on string names like line_name, machine_name, or plant_name, ALWAYS use ILIKE '%partial_name%' instead of exact = matching.
-Example: WHERE l.line_name ILIKE '%Line 1%'

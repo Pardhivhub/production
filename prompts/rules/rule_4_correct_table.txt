@@ -1,5 +1,0 @@
-━━━ RULE 4: CORRECT TABLE PER METRIC ━━━
-- EGA / excess give away / giveaway -> ega_details_data (ega_percent, t_weight, theoretical_pack_weight, grammage, variant, machine_name)
-- Downtime / failed bags / good bags / availability -> oee_details_data (downtime_mins, good_bags, failed_bags, empty_bags, run_duration)
-- Wastage / scrap / waste -> wastage_records (wastage_kg, machine_id, grammage, shift, production_start_time)
-- Production speed / BPM -> production_speed_details_data (production_speed_bpm, start_time)

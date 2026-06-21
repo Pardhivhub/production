@@ -1,0 +1,56 @@
+[
+  {
+    "id": "oee",
+    "name": "Overall Equipment Effectiveness (OEE)",
+    "description": "Calculates the total OEE factoring in Availability, Performance, and Quality.",
+    "example": "What is the OEE for Machine 14 on Monday?"
+  },
+  {
+    "id": "ega",
+    "name": "Excess Give Away (EGA)",
+    "description": "Measures material wasted by filling beyond the theoretical pack weight.",
+    "example": "Show me the EGA percentage for line 2 last week."
+  },
+  {
+    "id": "quality",
+    "name": "Quality Percentage",
+    "description": "Percentage of good bags out of total bags produced, excluding failed/overlimit.",
+    "example": "What was the quality rate across all machines yesterday?"
+  },
+  {
+    "id": "availability",
+    "name": "Machine Availability",
+    "description": "Percentage of scheduled time the machine was actively running without downtime.",
+    "example": "Which machine had the lowest availability on May 28th?"
+  },
+  {
+    "id": "performance",
+    "name": "Production Performance",
+    "description": "Calculates actual production speed versus the target theoretical speed.",
+    "example": "Show me the performance metrics for the morning shift."
+  },
+  {
+    "id": "gsm",
+    "name": "GSM Consumption",
+    "description": "Tracks total packaging material consumption calculated from start and end roll weights.",
+    "example": "What is the total GSM consumption for ITC?"
+  },
+  {
+    "id": "mttr",
+    "name": "Mean Time To Repair (MTTR)",
+    "description": "Average time taken to resolve machine errors (jam, splice, print check, etc).",
+    "example": "What is the MTTR for Machine A?"
+  },
+  {
+    "id": "mtbf",
+    "name": "Mean Time Between Failures (MTBF)",
+    "description": "Average runtime between machine errors.",
+    "example": "Which machine has the best MTBF?"
+  },
+  {
+    "id": "wastage",
+    "name": "Total Wastage",
+    "description": "Sum of all recorded physical wastage in kilograms.",
+    "example": "How much total wastage was recorded at Plant 1?"
+  }
+]

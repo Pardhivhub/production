@@ -1,0 +1,11 @@
+RULE D — PRODUCTION SPEED (JSONB UNNESTING)
+
+— Production Speed —
+TABLE: itciot.production_speed_details_data
+The column production_speed_bpm is stored as JSONB containing an array of numeric speeds.
+NEVER use jsonb_array_elements_text(). ALWAYS use jsonb_array_elements() and cast to ::numeric.
+Correct pattern to find average production speed (BPM):
+  SELECT AVG(value::numeric) AS production_speed_mean_bpm
+  FROM itciot.production_speed_details_data,
+       jsonb_array_elements(production_speed_bpm) AS value
+  WHERE machine_id = 4 AND start_time::date = '2025-05-28'

@@ -18,7 +18,7 @@ pip3 install -q -r requirements.txt 2>/dev/null || echo "⚠️  Some dependenci
 
 # Kill any existing app.py processes
 echo "🔄 Cleaning up old processes..."
-pkill -f "python3 app.py" || true
+pkill -f "python.*app.py" || true
 sleep 1
 
 # Start Backend

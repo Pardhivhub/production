@@ -1,0 +1,15 @@
+RULE C — MTTR AND MTBF CALCULATIONS
+
+TABLE: itciot.oee_details_data
+
+MTTR (Mean Time To Repair) and MTBF (Mean Time Between Failures) denominators MUST be the exact sum of ALL error columns.
+
+Total Error Count:
+SUM(jaw_jam_error) + SUM(jam_error) + SUM(fmd_error) + SUM(splice_error) + SUM(dump_error) + SUM(print_check_err) + SUM(reg_mark_err)
+
+MTTR Formula:
+SUM(downtime_mins) / NULLIF(SUM(jaw_jam_error+jam_error+fmd_error+splice_error+dump_error+print_check_err+reg_mark_err), 0) AS mttr_mins
+
+MTBF Formula:
+SUM(run_duration) / NULLIF(SUM(jaw_jam_error+jam_error+fmd_error+splice_error+dump_error+print_check_err+reg_mark_err), 0) AS mtbf_mins
+Do NOT use hardcoded 60 for run time in MTBF. Use SUM(run_duration) because rows may not represent exactly 60 minutes.

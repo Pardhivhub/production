@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIR: str = "./chroma_data"
     EMBEDDING_MODEL: str = "all-minilm"
     DISABLE_RAG: bool = False
+    RULE_SCORE_THRESHOLD: float = 0.05
 
     # Database URL configuration
     DATABASE_URL: str = "postgresql://pardhivkrishna@localhost:5432/iiot_feedback"

@@ -1,0 +1,11 @@
+{
+  "gsm_consumption": "SELECT vendor, GREATEST(0, SUM(CASE WHEN weight_type='Starting Weight' THEN weight ELSE 0 END)-SUM(CASE WHEN weight_type='Ending Weight' THEN weight ELSE 0 END)) AS value FROM gsm_usage_details {where_clause} GROUP BY vendor ORDER BY value DESC",
+  "oee_percent": "SELECT machine_id, machine_name, ((SUM(good_bags)/NULLIF(SUM(1)*60-SUM(downtime_mins),0)*60)/NULLIF(AVG(target_speed),0)*100) * ((SUM(1)*60-SUM(downtime_mins))/NULLIF(SUM(1)*60,0)*100) * (CASE WHEN SUM(good_bags)=0 THEN 0 ELSE 100-((SUM(overlimit_count)+SUM(failed_bags))/NULLIF(SUM(good_bags),0))*100 END) / 10000 AS value FROM oee_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "ega_percent": "SELECT machine_id, machine_name, ((SUM(t_weight)-SUM(theoretical_pack_weight))/NULLIF(SUM(t_weight),0))*100 AS value FROM ega_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "quality_percent": "SELECT machine_id, machine_name, CASE WHEN SUM(good_bags)=0 THEN 0 ELSE 100-((SUM(overlimit_count)+SUM(failed_bags))/NULLIF(SUM(good_bags),0))*100 END AS value FROM oee_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "availability_percent": "SELECT machine_id, machine_name, ((SUM(1)*60-SUM(downtime_mins))/NULLIF(SUM(1)*60,0))*100 AS value FROM oee_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "production_kg": "SELECT machine_id, machine_name, SUM(COALESCE(good_bags,0)*COALESCE(grammage,0))/1000 AS value FROM oee_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "mttr": "SELECT machine_id, machine_name, SUM(downtime_mins)/NULLIF(SUM(jaw_jam_error+jam_error+fmd_error+splice_error+dump_error+print_check_err+reg_mark_err),0) AS value FROM oee_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "mtbf": "SELECT machine_id, machine_name, SUM(run_duration)/NULLIF(SUM(jaw_jam_error+jam_error+fmd_error+splice_error+dump_error+print_check_err+reg_mark_err),0) AS value FROM oee_details_data {where_clause} GROUP BY machine_id, machine_name",
+  "wastage_kg": "SELECT plant_id, SUM(wastage_kg) AS value FROM wastage_records {where_clause} GROUP BY plant_id"
+}

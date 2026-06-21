@@ -1,0 +1,26 @@
+RULE E — MACHINE ID JOINS AND DIMENSION TABLES
+
+— Machine Name Join —
+The machines table has machine_name like 'Robot-1', 'Filler-2'.
+The production tables (oee_details_data, ega_details_data) have machine_name like 'Machine-1', 'Machine-2'.
+NEVER join on machine_name — they are different formats.
+Always join on machine_id:
+  JOIN itciot.machines m ON oee_details_data.machine_id = m.id
+
+— Dimension Tables —
+Three dimension/metadata tables exist:
+  - machines → id (PK), machine_name (text)
+  - gmiiot_plants → plant_id (PK), plant_name (text)
+  - gmiiot_lines → id (PK), line_name (text), plant_id (FK → gmiiot_plants.plant_id)
+
+When to JOIN:
+  - User mentions a plant name → JOIN gmiiot_plants
+  - User mentions a line name → JOIN gmiiot_lines
+  - User asks for machine type/name from metadata → JOIN machines
+
+— loop_id to Line Join —
+The time-series tables (oee_details_data, ega_details_data, production_speed_details_data) do NOT have plant_id or line_id columns, but they DO have a loop_id column.
+loop_id maps directly to gmiiot_lines.id. Join using:
+  FROM oee_details_data o
+  JOIN gmiiot_lines l ON o.loop_id = l.id
+  JOIN gmiiot_plants p ON l.plant_id = p.plant_id

@@ -1,3 +1,0 @@
-━━━ RULE 10: AVAILABILITY CALCULATION ━━━
-There is NO 'availability' column in oee_details_data. Calculate it dynamically:
-SELECT machine_id, machine_name, (SUM(run_duration) * 100.0) / NULLIF(SUM(run_duration) + SUM(downtime_mins), 0) AS availability_pct

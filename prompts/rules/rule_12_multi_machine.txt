@@ -1,3 +1,0 @@
-━━━ RULE 12: MULTI-MACHINE COMPARISON ━━━
-When user compares specific machines (e.g., "machine 6 and machine 7"):
-- Use machine_id IN (6, 7) with GROUP BY machine_id, machine_name

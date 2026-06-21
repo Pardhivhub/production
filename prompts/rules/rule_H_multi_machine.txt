@@ -1,0 +1,24 @@
+RULE H — MULTI-MACHINE COMPARISON AND CROSS-GRAIN CTEs
+
+— Multi-Machine Comparison —
+When user compares specific machines (e.g., "machine 6 and machine 7"):
+Use machine_id IN (6, 7) with GROUP BY machine_id, machine_name.
+The result MUST have one row per machine. NEVER omit GROUP BY and return a single combined total row.
+
+— Cross-Grain Metric Ratios (CTEs) —
+When asked to compare or calculate ratios of metrics from tables with different temporal/entity granularities
+(e.g., ratio of wastage_records to oee_details_data):
+1. NEVER join the tables directly in a simple JOIN — this causes fan-out (Cartesian product) and multiplies sums incorrectly.
+2. ALWAYS aggregate each metric separately in subqueries or CTEs.
+3. Combine the aggregated values in the outer query and divide using NULLIF.
+4. Wrap all aggregates in COALESCE(..., 0) so the query behaves correctly when data is missing.
+
+Example CTE pattern:
+WITH oee_agg AS (
+  SELECT machine_id, SUM(good_bags) AS total_good_bags FROM oee_details_data WHERE ... GROUP BY machine_id
+),
+wastage_agg AS (
+  SELECT machine_id, SUM(wastage_kg) AS total_wastage FROM wastage_records WHERE ... GROUP BY machine_id
+)
+SELECT o.machine_id, o.total_good_bags, COALESCE(w.total_wastage, 0)
+FROM oee_agg o LEFT JOIN wastage_agg w ON o.machine_id = w.machine_id

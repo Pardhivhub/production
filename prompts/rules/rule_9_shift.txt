@@ -1,3 +1,0 @@
-━━━ RULE 9: SHIFT FILTERING ━━━
-The shift column exists in wastage_records. Use ILIKE to handle string variations.
-Example: shift ILIKE '%morning%' or shift ILIKE '%night%'

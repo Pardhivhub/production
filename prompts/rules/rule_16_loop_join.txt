@@ -1,5 +1,0 @@
-━━━ RULE 16: JOINING OEE/EGA/SPEED TO LINES & PLANTS ━━━
-The time-series tables (oee_details_data, ega_details_data, production_speed_details_data) do not have plant_id or line_id columns, but they DO have a loop_id column.
-loop_id maps directly to the line ID (gmiiot_lines.id).
-Therefore, join using:
-FROM oee_details_data o JOIN gmiiot_lines l ON o.loop_id = l.id JOIN gmiiot_plants p ON l.plant_id = p.plant_id

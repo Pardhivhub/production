@@ -1,7 +1,7 @@
 import json
 import logging
 import asyncio
-from fastapi import FastAPI, HTTPException, Body, Header
+from fastapi import FastAPI, HTTPException, Body, Header, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,23 +9,253 @@ from typing import Optional, List
 from pathlib import Path
 
 import os
-from database import DatabaseConnector, SemanticLayer
-from kpi_and_router import KPIEngine, QueryRouter, QuerySuggester
-from sql_generation import SQLGenerator, ConstraintAwareQueryGenerator, NLFilterParser
-from search_and_rag import TableSelector, RAGExplorer
-from cache_and_memory import QueryCache, ConversationManager
-from analytics_and_alerts import AnalyticsEngine, AlertSystem
+from data_layer import DatabaseConnector, SemanticLayer
+from core_engine import KPIEngine, QueryRouter
+from core_engine import SQLGenerator
+from core_engine import TableSelector, RAGExplorer, PromptRAG
+from data_layer import QueryCache, ConversationManager
+
 from backend.config import settings
-from validation import SQLValidator, ResultValidator, EntityMapper
-from log_stream import log_streamer
+from core_engine import SQLValidator
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+class NLFilterParser:
+    """
+    Parses natural language date/time expressions from user queries and converts them
+    into SQL WHERE clause fragments using the correct time column for each table.
+
+    Supports:
+    - Explicit date ranges: "from DD-MM-YYYY to DD-MM-YYYY", "from YYYY-MM-DD to YYYY-MM-DD"
+    - Between ranges: "between 29-05-2025 and 31-05-2025"
+    - Single dates: "on 29-05-2025", "on 2025-05-29", or bare dates like "29-05-2025"
+    - Month-year: "May 2025", "in May 2025", "during April 2025"
+    - Quarter: "Q1 2025", "Q2 2026"
+    - Full year: "in 2025", "year 2025", "during 2025"
+    - Relative: "today", "yesterday", "this week", "last week", "this month", "last month",
+                "this year", "last year", "last 7 days", "last N days", "last N weeks",
+                "last N months"
+    """
+    import re
+    from datetime import datetime, timedelta
+
+    _DATE_PATTERNS = [
+        # DD-MM-YYYY range
+        (r'from\s+(\d{1,2}[-/]\d{1,2}[-/]\d{4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{4})', 'range_dmy'),
+        # YYYY-MM-DD range
+        (r'from\s+(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})', 'range_ymd'),
+        # between X and Y (DMY)
+        (r'between\s+(\d{1,2}[-/]\d{1,2}[-/]\d{4})\s+and\s+(\d{1,2}[-/]\d{1,2}[-/]\d{4})', 'range_dmy'),
+        # between X and Y (YMD)
+        (r'between\s+(\d{4}-\d{2}-\d{2})\s+and\s+(\d{4}-\d{2}-\d{2})', 'range_ymd'),
+        # single date with "on"
+        (r'on\s+(\d{1,2}[-/]\d{1,2}[-/]\d{4})', 'single_dmy'),
+        (r'on\s+(\d{4}-\d{2}-\d{2})', 'single_ymd'),
+    ]
+
+    MONTH_MAP = {
+        'january': 1, 'jan': 1,
+        'february': 2, 'feb': 2,
+        'march': 3, 'mar': 3,
+        'april': 4, 'apr': 4,
+        'may': 5,
+        'june': 6, 'jun': 6,
+        'july': 7, 'jul': 7,
+        'august': 8, 'aug': 8,
+        'september': 9, 'sep': 9, 'sept': 9,
+        'october': 10, 'oct': 10,
+        'november': 11, 'nov': 11,
+        'december': 12, 'dec': 12,
+    }
+
+    def _parse_dmy(self, s):
+        """Parse DD-MM-YYYY or DD/MM/YYYY string to datetime."""
+        import re
+        from datetime import datetime
+        s = re.sub(r'[-/]', '-', s)
+        return datetime.strptime(s, "%d-%m-%Y")
+
+    def _parse_ymd(self, s):
+        """Parse YYYY-MM-DD string to datetime."""
+        from datetime import datetime
+        return datetime.strptime(s, "%Y-%m-%d")
+
+    def _is_unix(self, col):
+        return "unix" in col.lower()
+
+    def _to_sql(self, start, end, col):
+        """Generate WHERE clause fragment for the given date range and time column."""
+        from datetime import timedelta
+        if self._is_unix(col):
+            start_ts = int(start.timestamp())
+            end_ts = int((end + timedelta(days=1)).timestamp()) - 1
+            return f"{col} BETWEEN {start_ts} AND {end_ts}"
+        else:
+            return f"{col} BETWEEN '{start.strftime('%Y-%m-%d')}' AND '{end.strftime('%Y-%m-%d')} 23:59:59'"
+
+    def parse_temporal_filter(self, query: str, time_column: str = "unix_timestamp") -> str:
+        """
+        Extract a time range from the query string and return a SQL WHERE fragment.
+        Returns empty string if no temporal expression is found.
+        """
+        import re
+        from datetime import datetime, timedelta
+        import calendar
+
+        q = query.lower().strip()
+        now = datetime.now()
+
+        # ── 1. Explicit date range and single date patterns ───────────────────────
+        for pattern, kind in self._DATE_PATTERNS:
+            m = re.search(pattern, q, re.IGNORECASE)
+            if m:
+                try:
+                    if kind == 'range_dmy':
+                        start = self._parse_dmy(m.group(1))
+                        end = self._parse_dmy(m.group(2))
+                    elif kind == 'range_ymd':
+                        start = self._parse_ymd(m.group(1))
+                        end = self._parse_ymd(m.group(2))
+                    elif kind == 'single_dmy':
+                        start = end = self._parse_dmy(m.group(1))
+                    elif kind == 'single_ymd':
+                        start = end = self._parse_ymd(m.group(1))
+                    else:
+                        continue
+                    return self._to_sql(start, end, time_column)
+                except Exception:
+                    continue
+
+        # ── 2. Standalone bare dates (no "on" keyword) ───────────────────────────
+        # Try DD-MM-YYYY / DD/MM/YYYY first
+        m = re.search(r'\b(\d{1,2}[-/]\d{1,2}[-/]\d{4})\b', q)
+        if m:
+            try:
+                start = self._parse_dmy(m.group(1))
+                return self._to_sql(start, start, time_column)
+            except Exception:
+                pass
+
+        # Then try YYYY-MM-DD
+        m = re.search(r'\b(\d{4}-\d{2}-\d{2})\b', q)
+        if m:
+            try:
+                start = self._parse_ymd(m.group(1))
+                return self._to_sql(start, start, time_column)
+            except Exception:
+                pass
+
+        # ── 3. Quarter references ("Q1 2025", "q3 2026") ─────────────────────────
+        m = re.search(r'\bq([1-4])\s*(\d{4})\b', q)
+        if m:
+            quarter = int(m.group(1))
+            year = int(m.group(2))
+            q_start_month = (quarter - 1) * 3 + 1
+            q_end_month = q_start_month + 2
+            start = datetime(year, q_start_month, 1)
+            end = datetime(year, q_end_month, calendar.monthrange(year, q_end_month)[1])
+            return self._to_sql(start, end, time_column)
+
+        # ── 4. Named month + year ("May 2025", "in June 2025", "during April 2025") ─
+        month_pattern = '|'.join(self.MONTH_MAP.keys())
+        m = re.search(rf'\b({month_pattern})\s+(\d{{4}})\b', q)
+        if m:
+            month_num = self.MONTH_MAP[m.group(1)]
+            year = int(m.group(2))
+            last_day = calendar.monthrange(year, month_num)[1]
+            start = datetime(year, month_num, 1)
+            end = datetime(year, month_num, last_day)
+            return self._to_sql(start, end, time_column)
+
+        # ── 5. Full year reference ("in 2025", "year 2025", "during 2025") ────────
+        m = re.search(r'\b(?:in|year|during|for)\s+(\d{4})\b', q)
+        if m:
+            year = int(m.group(1))
+            if 2020 <= year <= 2030:
+                return self._to_sql(datetime(year, 1, 1), datetime(year, 12, 31), time_column)
+
+        # ── 6. Relative expressions ───────────────────────────────────────────────
+        if 'today' in q:
+            return self._to_sql(now.replace(hour=0, minute=0, second=0, microsecond=0), now, time_column)
+
+        if 'yesterday' in q:
+            y = now - timedelta(days=1)
+            return self._to_sql(
+                y.replace(hour=0, minute=0, second=0, microsecond=0),
+                y.replace(hour=23, minute=59, second=59, microsecond=0),
+                time_column
+            )
+
+        # last N days
+        m = re.search(r'last\s+(\d+)\s+days?', q)
+        if m:
+            n = int(m.group(1))
+            start = (now - timedelta(days=n)).replace(hour=0, minute=0, second=0, microsecond=0)
+            return self._to_sql(start, now, time_column)
+
+        # last N weeks
+        m = re.search(r'last\s+(\d+)\s+weeks?', q)
+        if m:
+            n = int(m.group(1))
+            start = (now - timedelta(weeks=n)).replace(hour=0, minute=0, second=0, microsecond=0)
+            return self._to_sql(start, now, time_column)
+
+        # last N months
+        m = re.search(r'last\s+(\d+)\s+months?', q)
+        if m:
+            n = int(m.group(1))
+            month = now.month - n
+            year = now.year
+            while month <= 0:
+                month += 12
+                year -= 1
+            start = datetime(year, month, 1)
+            return self._to_sql(start, now, time_column)
+
+        if 'this week' in q:
+            start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            return self._to_sql(start, now, time_column)
+
+        if 'this month' in q:
+            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            return self._to_sql(start, now, time_column)
+
+        if 'this year' in q or 'current year' in q:
+            return self._to_sql(datetime(now.year, 1, 1), now, time_column)
+
+        if 'last week' in q:
+            start = now - timedelta(days=now.weekday() + 7)
+            end = start + timedelta(days=6)
+            return self._to_sql(
+                start.replace(hour=0, minute=0, second=0, microsecond=0),
+                end.replace(hour=23, minute=59, second=59, microsecond=0),
+                time_column
+            )
+
+        if 'last month' in q:
+            first_this = now.replace(day=1)
+            end = first_this - timedelta(days=1)
+            start = end.replace(day=1)
+            return self._to_sql(
+                start.replace(hour=0, minute=0, second=0, microsecond=0),
+                end.replace(hour=23, minute=59, second=59, microsecond=0),
+                time_column
+            )
+
+        if 'last year' in q or 'previous year' in q:
+            return self._to_sql(datetime(now.year - 1, 1, 1), datetime(now.year - 1, 12, 31), time_column)
+
+        return ""
+
+
+
 # Initialize validators
 sql_validator = SQLValidator()
-result_validator = ResultValidator()
-entity_mapper = EntityMapper()
+
+
 
 app = FastAPI(
     title="Production Chatbot Engine",
@@ -47,11 +277,8 @@ active_schema: Optional[dict] = None
 rag_explorer: Optional[RAGExplorer] = None
 table_selector: Optional[TableSelector] = None
 query_cache = QueryCache(ttl_minutes=30)
-analytics_engine: Optional[AnalyticsEngine] = None
-alert_system: Optional[AlertSystem] = None
 semantic_layer: Optional[SemanticLayer] = None
 conversation_manager = ConversationManager(max_history=20, max_turns=3)
-query_generator: Optional[ConstraintAwareQueryGenerator] = None
 
 
 # -----------------------------------------------------------------------
@@ -60,8 +287,7 @@ query_generator: Optional[ConstraintAwareQueryGenerator] = None
 
 @app.on_event("startup")
 async def startup_event():
-    global db_connector, active_schema, rag_explorer, analytics_engine, \
-           alert_system, semantic_layer, query_generator, table_selector
+    global db_connector, active_schema, rag_explorer, semantic_layer, table_selector
 
     logger.info(f"Auto-connecting to default database: {settings.DATABASE_URL}")
     try:
@@ -77,15 +303,14 @@ async def startup_event():
         await conversation_manager.initialize_db()
         query_cache.db = connector
         await query_cache.initialize_db()
-        analytics_engine = AnalyticsEngine(connector)
-        alert_system = AlertSystem(connector)
-        query_generator = ConstraintAwareQueryGenerator(conversation_manager)
+        
+        
 
         # Build table selector once globally
         table_selector = TableSelector(active_schema)
 
         # Start continuous background monitoring
-        asyncio.create_task(alert_system.run_continuous_monitoring(active_schema))
+        
 
         logger.info("Auto-connection successful!")
     except Exception as e:
@@ -128,7 +353,7 @@ async def _do_reindex() -> str:
     Called on /connect and on reindex chat command.
     Returns status message.
     """
-    global active_schema, table_selector, analytics_engine, alert_system, query_generator
+    global active_schema, table_selector
 
     if not db_connector:
         return "No database connected. Please connect first."
@@ -143,9 +368,8 @@ async def _do_reindex() -> str:
         else:
             table_selector.refresh_schema(active_schema)
 
-        analytics_engine = AnalyticsEngine(db_connector)
-        alert_system = AlertSystem(db_connector)
-        query_generator = ConstraintAwareQueryGenerator(conversation_manager)
+        
+        
 
         table_count = len(active_schema.get("tables", []))
         table_names = [t["name"] for t in active_schema.get("tables", [])]
@@ -163,6 +387,16 @@ async def _do_reindex() -> str:
 # -----------------------------------------------------------------------
 # Endpoints
 # -----------------------------------------------------------------------
+
+@app.get("/api/capabilities")
+async def get_capabilities():
+    import json
+    import os
+    cap_file = "config/capabilities.json"
+    if os.path.exists(cap_file):
+        with open(cap_file, "r") as f:
+            return json.load(f)
+    return []
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
@@ -183,13 +417,16 @@ async def get_connection_status():
             "db_url": settings.DATABASE_URL,
             "schema_info": active_schema
         }
-    return {"status": "disconnected"}
+    return {
+        "status": "disconnected",
+        "default_db_url": settings.DATABASE_URL
+    }
 
 
 @app.post("/connect")
 async def connect_database(req: ConnectRequest):
-    global db_connector, active_schema, analytics_engine, alert_system, \
-           semantic_layer, query_generator, table_selector
+    global db_connector, active_schema, \
+           semantic_layer, table_selector
 
     db_url = req.db_url.strip() if req.db_url else settings.DATABASE_URL
     try:
@@ -206,9 +443,8 @@ async def connect_database(req: ConnectRequest):
         query_cache.db = connector
         await query_cache.initialize_db()
         active_schema = schema_info
-        analytics_engine = AnalyticsEngine(connector)
-        alert_system = AlertSystem(connector)
-        query_generator = ConstraintAwareQueryGenerator(conversation_manager)
+        
+        
 
         # Always reindex on connect — picks up any new tables automatically
         if table_selector is None:
@@ -217,7 +453,7 @@ async def connect_database(req: ConnectRequest):
             table_selector.refresh_schema(active_schema)
 
         # Restart monitoring with new schema
-        asyncio.create_task(alert_system.run_continuous_monitoring(active_schema))
+        
 
         logger.info(f"Connected and reindexed: {len(active_schema.get('tables', []))} tables")
 
@@ -318,7 +554,7 @@ async def stream_chat(req: QueryRequest):
         router = QueryRouter(active_schema)
         kpi_engine = KPIEngine(active_schema)
         generator = SQLGenerator(db_connector)
-        suggester = QuerySuggester(active_schema)
+        
 
         intent = router.classify_intent(req.query)
 
@@ -347,7 +583,7 @@ async def stream_chat(req: QueryRequest):
                     explanation = await generator.explain_results(
                         req.query, sql, results, extra_context="[SEMANTIC CACHE HIT]"
                     )
-                    suggestions = suggester.suggest_followups(req.query, sql, results, [])
+                    suggestions = []
                     
                     conversation_manager.add_turn(req.session_id, req.query, sql, f"{results.get('row_count', 0)} rows")
                     await conversation_manager.add_assistant_message(
@@ -407,7 +643,7 @@ async def stream_chat(req: QueryRequest):
                     logger.warning(f"RAG retrieval failed: {e}")
 
             explanation = await generator.explain_rag_concept(req.query, rag_context)
-            suggestions = suggester.suggest_followups(req.query, "", {"row_count": 0, "rows": []}, [])
+            suggestions = []
             yield format_sse("answer", {"answer": explanation, "suggestions": suggestions})
             return
 
@@ -424,6 +660,10 @@ async def stream_chat(req: QueryRequest):
         try:
             conv_context = conversation_manager.get_context(req.session_id)
             full_context = conversation_manager.get_conversation_context(last_n=3)
+
+            global table_selector
+            if table_selector is None:
+                table_selector = TableSelector(active_schema)
 
             # Use global table_selector — pass kpi matched_tables for scoring boost
             kpi_matched = kpi_data.get("matched_tables", [])
@@ -448,7 +688,7 @@ async def stream_chat(req: QueryRequest):
             enhanced_hints = kpi_data["hints"]
             
             # Inject entity detection hint BEFORE SQL generation
-            entity_hint = entity_mapper.inject_entity_hint(req.query)
+            entity_hint = ''
             enhanced_hints = f"{entity_hint}\n\n{enhanced_hints}"
             
             # Dynamically inject relationship join hints based on selected_tables!
@@ -475,7 +715,7 @@ async def stream_chat(req: QueryRequest):
             resolved_time_col = "unix_timestamp"
             if selected_tables:
                 primary_tbl = selected_tables[0]
-                from kpi_and_router import TIME_COLUMN_MAP
+                from core_engine import TIME_COLUMN_MAP
                 resolved_time_col = TIME_COLUMN_MAP.get(primary_tbl, "timestamp")
 
             # Parse temporal filters using NLFilterParser
@@ -485,16 +725,21 @@ async def stream_chat(req: QueryRequest):
                 enhanced_hints += f"\n\nPARSED TIME FILTER: {time_filter}\nUse this exact WHERE clause fragment for time filtering."
 
             # Pass matched_tables to sql_generator for confirmed table hint
-            llm_generated_sql = await generator.generate_sql(
+            llm_generated_sql, rules_meta_list = await generator.generate_sql(
                 req.query,
                 reduced_schema,
                 enhanced_hints,
-                matched_tables=selected_tables
+                matched_tables=selected_tables,
+                time_filter=time_filter
             )
 
-            sql = query_generator.generate_query(
-                req.query, active_schema, llm_generated_sql
-            ) if query_generator else llm_generated_sql
+            if rules_meta_list:
+                yield format_sse("pipeline", {
+                    "stage": "rag_rules",
+                    "rules": rules_meta_list
+                })
+
+            sql = llm_generated_sql
 
             if sql != llm_generated_sql:
                 logger.info(f"Constraint validator modified SQL:\nOriginal: {llm_generated_sql}\nModified: {sql}")
@@ -610,18 +855,7 @@ async def stream_chat(req: QueryRequest):
                 logger.warning(f"RAG retrieval failed: {e}")
 
         auto_insights = ""
-        if analytics_engine and selected_tables:
-            try:
-                from analytics_and_alerts import METRIC_COLUMN_MAP, TIME_COLUMN_MAP as AE_TIME_MAP
-                primary_table = selected_tables[0]
-                metric_col = METRIC_COLUMN_MAP.get(primary_table)
-                if metric_col:
-                    time_col = AE_TIME_MAP.get(primary_table, "start_time")
-                    auto_insights = await analytics_engine.auto_insights(
-                        req.query, primary_table, metric_col, time_column=time_col
-                    )
-            except Exception as e:
-                logger.warning(f"Auto insights failed: {e}")
+        # Auto insights disabled based on user preference
 
 
         try:
@@ -629,36 +863,19 @@ async def stream_chat(req: QueryRequest):
                 req.query, sql, results, extra_context=extra_context
             )
 
-            # Zero result suggestion
-            row_count = results.get("row_count", 0)
-            is_zero = row_count == 0 or (
-                row_count == 1
-                and results.get("rows")
-                and list(results["rows"][0].values())[0] == 0
-            )
-            if is_zero and selected_tables:
-                all_tables = [t["name"] for t in active_schema.get("tables", [])]
-                alternatives = [t for t in all_tables if t not in selected_tables][:3]
-                if alternatives:
-                    explanation += (
-                        f"\n\n💡 **Suggestion**: No results found in `{selected_tables[0]}`. "
-                        f"You might want to check: {', '.join(f'`{t}`' for t in alternatives)}"
-                    )
-
-            if auto_insights:
-                explanation += auto_insights
+            # Zero result suggestion and auto insights are disabled
 
             result_summary = (
                 str(results["rows"][0])
                 if results.get("rows")
-                else f"{row_count} rows"
+                else f"{results.get('row_count', 0)} rows"
             )
             conversation_manager.add_turn(req.session_id, req.query, sql, result_summary)
             await conversation_manager.add_assistant_message(
                 explanation, sql_query=sql, query_result=results, session_id=req.session_id
             )
 
-            suggestions = suggester.suggest_followups(req.query, sql, results, selected_tables)
+            suggestions = []
 
             yield format_sse("answer", {
                 "answer": explanation,
@@ -682,42 +899,6 @@ async def stream_chat(req: QueryRequest):
 # Other Endpoints
 # -----------------------------------------------------------------------
 
-@app.get("/alerts")
-async def get_alerts():
-    if not alert_system or not active_schema:
-        return {"alerts": [], "message": "Alert system not initialized"}
-    all_alerts = []
-    for table in active_schema.get("tables", []):
-        alerts = await alert_system.check_alerts(table.get("name"), time_window_minutes=60)
-        all_alerts.extend(alerts)
-    return {"alerts": all_alerts, "count": len(all_alerts)}
-
-@app.get("/api/logs")
-async def stream_logs():
-    q = log_streamer.subscribe()
-    async def log_generator():
-        try:
-            while True:
-                msg = await q.get()
-                yield format_sse("log", {"message": msg})
-        finally:
-            log_streamer.unsubscribe(q)
-    return StreamingResponse(log_generator(), media_type="text/event-stream")
-
-
-@app.get("/insights/{table_name}/{metric_column}")
-async def get_insights(table_name: str, metric_column: str):
-    if not analytics_engine:
-        raise HTTPException(status_code=503, detail="Analytics engine not initialized")
-    from kpi_and_router import TIME_COLUMN_MAP
-    time_col = TIME_COLUMN_MAP.get(table_name, "created_at")
-    return {
-        "table": table_name,
-        "metric": metric_column,
-        "anomalies": await analytics_engine.detect_anomalies(table_name, metric_column, time_column=time_col),
-        "trends": await analytics_engine.detect_trends(table_name, metric_column, time_column=time_col),
-        "time_patterns": await analytics_engine.analyze_time_patterns(table_name, metric_column, time_column=time_col)
-    }
 
 
 @app.get("/report")
@@ -886,6 +1067,21 @@ async def clear_conversation():
     return {"status": "success", "message": "Conversation constraints cleared"}
 
 
+@app.post("/clear_cache")
+async def clear_cache():
+    query_cache.clear()
+    if query_cache.db and query_cache.db_initialized:
+        try:
+            if query_cache.vector_enabled:
+                await query_cache.db.execute_write("TRUNCATE TABLE semantic_query_cache")
+            else:
+                await query_cache.db.execute_write("TRUNCATE TABLE semantic_query_cache")
+        except Exception as e:
+            logger.error(f"Failed to clear semantic cache DB: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "success", "message": "Cache cleared successfully."}
+
+
 @app.get("/conversation/history")
 async def get_conversation_history():
     return {
@@ -961,7 +1157,7 @@ async def update_system_prompt(data: PromptData):
     prompt_path = Path(__file__).parent / "prompts" / "sql_system.txt"
     try:
         prompt_path.write_text(data.content, encoding="utf-8")
-        from sql_generation import reload_prompts
+        from core_engine import reload_prompts
         reload_prompts()
         return {"status": "success", "message": "Prompt updated and AI reloaded."}
     except Exception as e:

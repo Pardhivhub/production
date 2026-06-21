@@ -1,0 +1,9 @@
+-- Goal: Calculate GSM Consumption by vendor
+SELECT vendor,
+  GREATEST(0,
+    SUM(CASE WHEN weight_type = 'Starting Weight' THEN weight ELSE 0 END) -
+    SUM(CASE WHEN weight_type = 'Ending Weight' THEN weight ELSE 0 END)
+  ) AS gsm_vendor_consumption
+FROM itciot.gsm_usage_details
+GROUP BY vendor
+ORDER BY gsm_vendor_consumption DESC

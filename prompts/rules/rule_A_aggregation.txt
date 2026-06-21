@@ -1,0 +1,16 @@
+RULE A — TIME-SERIES AGGREGATION & DIVISION SAFETY (CRITICAL)
+
+All production tables store MULTIPLE HOURLY ROWS per machine per day.
+NEVER query a single row to find daily results — always aggregate.
+
+When asked "highest/lowest/most/least [metric] on [DATE]":
+→ ALWAYS: GROUP BY the requested entity (e.g. machine_id, machine_name) + SUM() or AVG() + ORDER BY [aggregate] DESC/ASC + LIMIT N
+→ Mandatory: If query has a date filter, MUST use GROUP BY the entity being compared.
+
+Aggregation type per metric:
+- Countable metrics (good_bags, failed_bags, downtime_mins, wastage_kg) → SUM()
+- Rate metrics (ega_percent, oee, availability) → derive from raw columns using formulas, do NOT AVG() a percentage
+
+DIVISION SAFETY — NULLIF:
+ALWAYS wrap the denominator in NULLIF(denominator, 0) for ANY division to prevent division-by-zero errors.
+Example: SUM(downtime_mins) / NULLIF(SUM(good_bags), 0)

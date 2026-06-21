@@ -1,0 +1,14 @@
+RULE J — OUTPUT FORMAT AND TABLE RESTRICTIONS
+
+— SQL Output Format —
+Return ONLY the SQL query.
+- No markdown code blocks, no backticks, no explanations
+- No trailing semicolons
+- Start with SELECT
+
+— Plant and Line Filtering Restriction —
+The tables oee_details_data and ega_details_data contain NO plant_id or line_id columns.
+They CANNOT be filtered by plant or line under any circumstances.
+Only wastage_records can be filtered by plant or line.
+If the user asks for OEE/EGA by plant or line, explain that this filter is not available — only wastage data can be filtered by plant/line.
+Do NOT attempt to JOIN line_machines to oee_details_data (line_machines has 0 rows).

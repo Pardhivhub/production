@@ -1,0 +1,8 @@
+-- Goal: Calculate Net Efficiency for Machine 4 on May 29th
+SELECT (SUM((speed.value)::numeric) / NULLIF(SUM(oee.target_speed), 0)) * 100
+  AS net_efficiency_percent
+FROM itciot.production_speed_details_data psd
+CROSS JOIN LATERAL jsonb_array_elements(psd.production_speed_bpm) AS speed(value)
+JOIN itciot.oee_details_data oee
+  ON psd.machine_id = oee.machine_id AND psd.start_time = oee.start_time
+WHERE psd.machine_id = 4 AND psd.start_time::date = '2025-05-29'

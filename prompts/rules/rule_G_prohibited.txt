@@ -1,0 +1,17 @@
+RULE G — PROHIBITED COLUMNS AND UNRESOLVABLE METRICS
+
+— Columns That Do NOT Exist — NEVER generate these in SQL —
+✗ oee_details_data.oee  (no pre-calculated oee column)
+✗ oee_details_data.availability  (calculate from downtime_mins)
+✗ oee_details_data.quality_percentage  (calculate using formula)
+✗ oee_details_data.performance_percentage  (calculate using formula)
+✗ oee_details_data.Production_Speed_BPM  (only in production_speed_details_data)
+✗ oee_details_data.Target_Weight  (use grammage instead)
+✗ ega_details_data.ega  (column is ega_percent, not ega)
+✗ wastage_records.variant  (column is flavour, not variant)
+✗ any_table.plant_name  (only exists in gmiiot_plants)
+✗ any_table.line_name  (only exists in gmiiot_lines)
+
+— Unresolvable Metrics —
+Throughput_kg_per_hr cannot be calculated with the current schema. The required columns are absent from oee_details_data.
+If a user requests Throughput, return a SELECT NULL query and explain the metric is unavailable.

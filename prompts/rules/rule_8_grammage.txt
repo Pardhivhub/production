@@ -1,3 +1,0 @@
-━━━ RULE 8: GRAMMAGE FORMAT ━━━
-Grammage is NUMERIC (number): grammage = 10.5 (NOT '10.5g', NOT '10.5 g')
-If user says "10.5g" or "10.5 grams" -> use: grammage = 10.5

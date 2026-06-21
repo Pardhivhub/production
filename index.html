@@ -762,7 +762,7 @@
             <div id="connection-status" class="status-badge">
                 <div class="status-dot"></div>
             </div>
-            <input type="text" id="db-url-input" placeholder="Enter SQLite Path (e.g. itciot.db) or Postgres Connection String..." value="itciot.db">
+            <input type="text" id="db-url-input" placeholder="Enter SQLite Path (e.g. itciot.db) or Postgres Connection String...">
             <button id="connect-btn" class="connect-btn">Connect</button>
         </div>
     </nav>
@@ -897,6 +897,8 @@
                         sendBtn.disabled = false;
                         renderSchemaBanner(data.schema_info);
                         console.log("Auto-connected to existing backend session successfully!");
+                    } else if (data.default_db_url) {
+                        dbInput.value = data.default_db_url;
                     }
                 }
             } catch (err) {
@@ -982,6 +984,9 @@
                                 } 
                                 else if (currentEvent === "pipeline" && data.stage === "table_selection") {
                                     renderTableSelection(contentEl, data.tables, data.scores);
+                                }
+                                else if (currentEvent === "pipeline" && data.stage === "rag_rules") {
+                                    renderRagRules(contentEl, data.rules);
                                 }
                                 // Check if clarification is needed
                                 else if (currentEvent === "clarification") {
@@ -1416,6 +1421,73 @@
             messagesContainer.scrollTo(0, messagesContainer.scrollHeight);
         }
 
+        function renderRagRules(container, rules) {
+            if (container.querySelector(".rag-rules-block")) return;
+            if (!rules || rules.length === 0) return;
+
+            const block = document.createElement("div");
+            block.className = "rag-rules-block";
+            block.style.background = "rgba(0, 240, 255, 0.05)";
+            block.style.border = "1px solid rgba(0, 240, 255, 0.1)";
+            block.style.borderRadius = "10px";
+            block.style.padding = "10px 14px";
+            block.style.marginTop = "4px";
+            block.style.marginBottom = "8px";
+            block.style.display = "flex";
+            block.style.flexDirection = "column";
+            block.style.gap = "8px";
+            block.style.animation = "slideIn 0.3s ease-out forwards";
+
+            const header = document.createElement("div");
+            header.style.display = "flex";
+            header.style.alignItems = "center";
+            header.style.gap = "6px";
+            header.style.fontSize = "9px";
+            header.style.color = "var(--primary)";
+            header.style.textTransform = "uppercase";
+            header.style.letterSpacing = "0.5px";
+            header.style.fontWeight = "600";
+            
+            header.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                Injected RAG Rules
+            `;
+            block.appendChild(header);
+
+            const rulesDiv = document.createElement("div");
+            rulesDiv.style.display = "flex";
+            rulesDiv.style.flexWrap = "wrap";
+            rulesDiv.style.gap = "6px";
+
+            rules.forEach(ruleInfo => {
+                const badge = document.createElement("div");
+                badge.style.background = "rgba(0, 0, 0, 0.4)";
+                badge.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+                badge.style.padding = "4px 8px";
+                badge.style.borderRadius = "6px";
+                badge.style.fontSize = "10.5px";
+                badge.style.display = "flex";
+                badge.style.alignItems = "center";
+                badge.style.gap = "6px";
+
+                const nameEl = document.createElement("span");
+                nameEl.style.color = "#fff";
+                nameEl.innerText = ruleInfo.rule.replace(".txt", "").replace(/_/g, " ");
+
+                const scoreEl = document.createElement("span");
+                scoreEl.style.color = "var(--primary)";
+                scoreEl.style.fontSize = "9px";
+                scoreEl.innerText = `Score: ${ruleInfo.score.toFixed(3)}`;
+
+                badge.appendChild(nameEl);
+                badge.appendChild(scoreEl);
+                rulesDiv.appendChild(badge);
+            });
+
+            block.appendChild(rulesDiv);
+            container.insertBefore(block, container.firstChild);
+        }
+
         function renderTableSelection(container, tables, scores) {
             if (container.querySelector(".table-selection-block")) return;
             if (!tables || tables.length === 0) return;
@@ -1488,14 +1560,14 @@
 
     <!-- Floating Action Buttons -->
     <div style="position:fixed;bottom:20px;right:20px;display:flex;gap:12px;z-index:1000;">
-        <button onclick="document.getElementById('report-panel').style.display='flex'; setDefaultReportDate();" 
+        <button onclick="document.getElementById('pattern-panel').style.display='flex'; loadCapabilities();" 
                 style="padding:12px 20px;
                        border-radius:12px;background:var(--bg-card);color:var(--text-main);
                        border:1px solid rgba(255,255,255,0.1);cursor:pointer;
                        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
                        display:flex;align-items:center;gap:8px;font-weight:600;
                        backdrop-filter: blur(10px); transition: all 0.2s ease;">
-            <span style="font-size:18px">📋</span> Shift Report
+            <span style="font-size:18px">💡</span> Supported Queries
         </button>
         <button onclick="document.getElementById('rules-panel').style.display='flex'; loadRules();" 
                 style="padding:12px 20px;
@@ -1505,6 +1577,15 @@
                        display:flex;align-items:center;gap:8px;font-weight:600;
                        backdrop-filter: blur(10px); transition: all 0.2s ease;">
             <span style="font-size:18px">⚙️</span> Rules Manager
+        </button>
+        <button onclick="clearCache()" 
+                style="padding:12px 20px;
+                       border-radius:12px;background:var(--bg-card);color:var(--text-main);
+                       border:1px solid rgba(255,255,255,0.1);cursor:pointer;
+                       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                       display:flex;align-items:center;gap:8px;font-weight:600;
+                       backdrop-filter: blur(10px); transition: all 0.2s ease;">
+            <span style="font-size:18px">🧹</span> Clear Cache
         </button>
         <button onclick="document.getElementById('backend-console-panel').style.display='flex'; scrollConsoleToBottom();" 
                 style="padding:12px 20px;
@@ -1665,41 +1746,24 @@
         </div>
     </div>
 
-    <!-- Shift Report Panel -->
-    <div id="report-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:2000;justify-content:center;align-items:center;">
+    <!-- Supported Queries Panel -->
+    <div id="pattern-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:2000;justify-content:center;align-items:center;">
         <div style="background:var(--bg-base); border: 1px solid var(--border-color); border-radius:16px; width:90%; max-width:1000px; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
             
             <!-- Header -->
             <div style="padding:20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-                <h2 style="font-size:1.2rem; display:flex; align-items:center; gap:10px;">
-                    <span style="color:var(--primary)">📋</span> Shift Performance Report
-                </h2>
-                <button onclick="document.getElementById('report-panel').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.5rem; line-height:1;">&times;</button>
-            </div>
-
-            <!-- Parameters Selector -->
-            <div style="padding: 16px 24px; border-bottom: 1px solid var(--border-color); display:flex; gap:15px; align-items:center; flex-wrap:wrap; background:rgba(255,255,255,0.01); flex-shrink:0;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label for="report-date" style="font-size:12px; color:var(--text-muted); font-weight:500;">Date:</label>
-                    <input type="date" id="report-date" class="rule-input" style="padding: 6px 12px; max-width: 160px;">
+                <div>
+                    <h2 style="font-size:1.2rem; display:flex; align-items:center; gap:10px;">
+                        <span style="color:var(--primary)">💡</span> Supported Capabilities Catalog
+                    </h2>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">These are the specific formulas and intents that the chatbot can answer with 100% accuracy.</p>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label for="report-shift" style="font-size:12px; color:var(--text-muted); font-weight:500;">Shift:</label>
-                    <select id="report-shift" class="rule-input" style="padding: 6px 12px; max-width: 160px; background: var(--bg-card); color: white; border: 1px solid rgba(255,255,255,0.1);">
-                        <option value="morning">Morning Shift</option>
-                        <option value="afternoon">Afternoon Shift</option>
-                        <option value="night">Night Shift</option>
-                    </select>
-                </div>
-                <button class="rule-btn" onclick="generateShiftReport()" style="padding: 8px 16px;">Generate Report</button>
+                <button onclick="document.getElementById('pattern-panel').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.5rem; line-height:1;">&times;</button>
             </div>
 
             <!-- Content Area -->
-            <div id="report-content" style="padding:24px; overflow-y:auto; flex: 1; display:flex; flex-direction:column; gap:20px;">
-                <div style="text-align:center; color:var(--text-muted); margin: 40px 0;">
-                    <span style="font-size:48px; display:block; margin-bottom:15px;">📊</span>
-                    Select a date and shift, then click "Generate Report" to compile metrics.
-                </div>
+            <div style="padding:24px; overflow-y:auto; flex: 1; display:flex; flex-direction:column; gap:20px;" id="capabilities-container">
+                <div style="text-align:center; padding: 20px; color: var(--text-muted);">Loading capabilities...</div>
             </div>
         </div>
     </div>
@@ -1894,260 +1958,50 @@
             loadRules();
         }
 
-        let currentReportData = null; // Store last fetched report
-
-        function setDefaultReportDate() {
-            const reportDateInput = document.getElementById('report-date');
-            if (reportDateInput && !reportDateInput.value) {
-                reportDateInput.value = '2025-05-28';
-            }
-        }
-
-        async function generateShiftReport() {
-            const date = document.getElementById('report-date').value;
-            const shift = document.getElementById('report-shift').value;
-            const container = document.getElementById('report-content');
-
-            if (!date) return alert("Please select a date.");
-
-            container.innerHTML = `
-                <div style="text-align:center; color:var(--text-muted); margin: 40px 0;">
-                    <div class="spinner" style="margin: 0 auto 15px auto;"></div>
-                    Compiling shift metrics and OEE data...
-                </div>
-            `;
-
+        // ================= Supported Capabilities JS =================
+        async function loadCapabilities() {
             try {
-                const response = await fetch(`/report?shift=${encodeURIComponent(shift)}&date=${encodeURIComponent(date)}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || "Failed to fetch report");
+                const res = await fetch('/api/capabilities');
+                const caps = await res.json();
+                
+                const container = document.getElementById('capabilities-container');
+                container.innerHTML = '';
+                
+                if (caps.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);">No capabilities loaded.</div>';
+                    return;
                 }
-                const data = await response.json();
-                currentReportData = data;
-                renderShiftReport(data);
+                
+                let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
+                
+                caps.forEach(cap => {
+                    html += `
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="font-weight: bold; color: var(--primary); font-size: 1.1em;">${cap.name}</div>
+                            <div style="color: var(--text-muted); font-size: 0.9em; flex-grow: 1;">${cap.description}</div>
+                            <div style="background: rgba(0,0,0,0.3); border-radius: 4px; padding: 10px; margin-top: 8px;">
+                                <div style="font-size: 0.75em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; font-weight: bold;">Example Query</div>
+                                <div style="color: white; font-style: italic; font-size: 0.9em;">"${cap.example}"</div>
+                                <button onclick="fillQuery('${cap.example.replace(/'/g, "\\'")}')" class="rule-btn" style="margin-top: 8px; padding: 4px 8px; font-size: 0.8em; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">Try it out</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
             } catch (err) {
-                container.innerHTML = `
-                    <div style="background: rgba(255,59,48,0.1); border: 1px solid rgba(255,59,48,0.3); border-radius: 8px; padding: 20px; text-align: center; color: var(--error-color);">
-                        <span style="font-size:32px; display:block; margin-bottom:10px;">❌</span>
-                        <strong>Error:</strong> ${err.message}
-                    </div>
-                `;
+                console.error("Failed to load capabilities", err);
+                document.getElementById('capabilities-container').innerHTML = '<div style="text-align:center; padding: 20px; color: var(--error-color);">Failed to load capabilities. Check console.</div>';
             }
         }
-
-        function renderShiftReport(data) {
-            const container = document.getElementById('report-content');
-            
-            // Determine OEE color
-            let oeeColor = 'var(--error-color)';
-            let oeeGrade = 'Needs Attention';
-            if (data.metrics.oee_percent >= 85) {
-                oeeColor = 'var(--success-color)';
-                oeeGrade = 'Excellent (World Class)';
-            } else if (data.metrics.oee_percent >= 60) {
-                oeeColor = 'var(--primary)';
-                oeeGrade = 'Good';
-            } else if (data.metrics.oee_percent >= 40) {
-                oeeColor = '#ff9500';
-                oeeGrade = 'Moderate';
-            }
-
-            // Top downtime machines HTML
-            let topDowntimeHTML = '';
-            if (data.top_downtime_machines && data.top_downtime_machines.length > 0) {
-                data.top_downtime_machines.forEach((m, idx) => {
-                    topDowntimeHTML += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <span style="font-weight:600; color:var(--text-muted);">#${idx+1}</span>
-                                <span style="font-weight:500; color:white;">${m.machine_name}</span>
-                            </div>
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--error-color); font-weight:600;">${m.downtime.toFixed(1)} mins</span>
-                        </div>
-                    `;
-                });
-            } else {
-                topDowntimeHTML = `<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:15px 0;">No downtime recorded.</div>`;
-            }
-
-            // Top failed machines HTML
-            let topFailedHTML = '';
-            if (data.top_failed_machines && data.top_failed_machines.length > 0) {
-                data.top_failed_machines.forEach((m, idx) => {
-                    topFailedHTML += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <span style="font-weight:600; color:var(--text-muted);">#${idx+1}</span>
-                                <span style="font-weight:500; color:white;">${m.machine_name}</span>
-                            </div>
-                            <span style="font-family:'JetBrains Mono', monospace; font-size:12px; color:#ff9500; font-weight:600;">${m.failed_bags.toLocaleString()} bags</span>
-                        </div>
-                    `;
-                });
-            } else {
-                topFailedHTML = `<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:15px 0;">No failed bags recorded.</div>`;
-            }
-
-            container.innerHTML = `
-                <div style="display:flex; flex-direction:column; gap:24px;">
-                    <!-- Meta info & Export controls -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
-                        <div>
-                            <h3 style="font-size:1.4rem; color:var(--text-main); margin-bottom:4px;">${data.label} — ${data.date}</h3>
-                            <p style="font-size:0.85rem; color:var(--text-muted);">Shift hours: <code>${data.start_time.split(' ')[1]}</code> to <code>${data.end_time.split(' ')[1]}</code></p>
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="rule-btn" onclick="copyReportToClipboard()" style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); padding: 8px 14px; font-size:12px; display:flex; align-items:center; gap:6px;">
-                                <span>📋</span> Copy Report
-                            </button>
-                            <button class="rule-btn" onclick="sendReportToChat()" style="background:var(--accent); color:white; padding: 8px 14px; font-size:12px; display:flex; align-items:center; gap:6px;">
-                                <span>💬</span> Ask Chatbot
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Main KPIs Grid -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px;">
-                        <!-- OEE Card -->
-                        <div class="kpi-card" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:12px; padding:20px; text-align:center; position:relative; overflow:hidden;">
-                            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; letter-spacing:1px; margin-bottom:12px;">Overall OEE</div>
-                            <div style="font-size:3rem; font-weight:800; color:${oeeColor}; text-shadow: 0 0 15px ${oeeColor}44; margin-bottom:10px;">${data.metrics.oee_percent}%</div>
-                            <div style="font-size:11px; color:var(--text-muted); display:inline-block; padding:2px 8px; border-radius:10px; background:rgba(255,255,255,0.05);">${oeeGrade}</div>
-                        </div>
-
-                        <!-- Availability Card -->
-                        <div class="kpi-card" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
-                            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; letter-spacing:1px; margin-bottom:12px; display:flex; justify-content:space-between;">
-                                <span>Availability</span>
-                                <span style="color:var(--primary);">${data.metrics.availability_percent}%</span>
-                            </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; margin-bottom:12px;">
-                                <div style="width:${data.metrics.availability_percent}%; height:100%; background:var(--primary); border-radius:3px; box-shadow:0 0 8px var(--primary-glow);"></div>
-                            </div>
-                            <div style="font-size:11px; color:var(--text-muted);">Total Downtime: <strong style="color:white;">${data.metrics.total_downtime_mins} mins</strong></div>
-                        </div>
-
-                        <!-- Performance Card -->
-                        <div class="kpi-card" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
-                            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; letter-spacing:1px; margin-bottom:12px; display:flex; justify-content:space-between;">
-                                <span>Performance</span>
-                                <span style="color:#bd00ff;">${data.metrics.performance_percent}%</span>
-                            </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; margin-bottom:12px;">
-                                <div style="width:${data.metrics.performance_percent}%; height:100%; background:#bd00ff; border-radius:3px; box-shadow:0 0 8px rgba(189,0,255,0.4);"></div>
-                            </div>
-                            <div style="font-size:11px; color:var(--text-muted);">Good Bags: <strong style="color:white;">${data.metrics.total_good_bags.toLocaleString()}</strong></div>
-                        </div>
-
-                        <!-- Quality Card -->
-                        <div class="kpi-card" style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:12px; padding:20px;">
-                            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600; letter-spacing:1px; margin-bottom:12px; display:flex; justify-content:space-between;">
-                                <span>Quality</span>
-                                <span style="color:#34c759;">${data.metrics.quality_percent}%</span>
-                            </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; margin-bottom:12px;">
-                                <div style="width:${data.metrics.quality_percent}%; height:100%; background:#34c759; border-radius:3px; box-shadow:0 0 8px rgba(52,199,89,0.4);"></div>
-                            </div>
-                            <div style="font-size:11px; color:var(--text-muted);">Failed Bags: <strong style="color:white;">${data.metrics.total_failed_bags.toLocaleString()}</strong></div>
-                        </div>
-                    </div>
-
-                    <!-- Minor Metrics Grid -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
-                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:12px 16px; display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size:11px; color:var(--text-muted);">Empty Bags</span>
-                            <span style="font-size:1.15rem; font-weight:600; color:white;">${data.metrics.total_empty_bags.toLocaleString()}</span>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:12px 16px; display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size:11px; color:var(--text-muted);">Avg Excess Give Away</span>
-                            <span style="font-size:1.15rem; font-weight:600; color:white;">${data.metrics.avg_ega_percent}%</span>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:12px 16px; display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size:11px; color:var(--text-muted);">Total Wastage</span>
-                            <span style="font-size:1.15rem; font-weight:600; color:#ff9500;">${data.metrics.total_wastage_kg} kg</span>
-                        </div>
-                    </div>
-
-                    <!-- Lists Side-by-Side -->
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
-                        <!-- Downtime Machines -->
-                        <div style="background:rgba(255,255,255,0.01); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
-                            <h4 style="font-size:0.95rem; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                                <span style="color:#ff3b30;">🚨</span> Top Downtime Machines
-                            </h4>
-                            <div style="display:flex; flex-direction:column; gap:10px;">
-                                ${topDowntimeHTML}
-                            </div>
-                        </div>
-
-                        <!-- Failed Machines -->
-                        <div style="background:rgba(255,255,255,0.01); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
-                            <h4 style="font-size:0.95rem; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-                                <span style="color:#ff9500;">⚠️</span> Top Failed Bag Machines
-                            </h4>
-                            <div style="display:flex; flex-direction:column; gap:10px;">
-                                ${topFailedHTML}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function copyReportToClipboard() {
-            if (!currentReportData) return;
-            const data = currentReportData;
-            
-            let dtText = '';
-            data.top_downtime_machines.forEach((m, idx) => {
-                dtText += `   ${idx+1}. ${m.machine_name}: ${m.downtime.toFixed(1)} mins\n`;
-            });
-            let fbText = '';
-            data.top_failed_machines.forEach((m, idx) => {
-                fbText += `   ${idx+1}. ${m.machine_name}: ${m.failed_bags.toLocaleString()} bags\n`;
-            });
-
-            const markdown = `=== SHIFT REPORT: ${data.label} — ${data.date} ===
-- OEE: ${data.metrics.oee_percent}%
-- Availability: ${data.metrics.availability_percent}% (Total Downtime: ${data.metrics.total_downtime_mins} mins)
-- Performance: ${data.metrics.performance_percent}% (Good Bags: ${data.metrics.total_good_bags.toLocaleString()})
-- Quality: ${data.metrics.quality_percent}% (Failed Bags: ${data.metrics.total_failed_bags.toLocaleString()})
-- Empty Bags: ${data.metrics.total_empty_bags.toLocaleString()}
-- Excess Give Away (EGA): ${data.metrics.avg_ega_percent}%
-- Total Wastage: ${data.metrics.total_wastage_kg} kg
-
-Top Downtime Machines:
-${dtText || '   None'}
-Top Failed Bag Machines:
-${fbText || '   None'}
-=============================================`;
-
-            navigator.clipboard.writeText(markdown)
-                .then(() => alert("Shift report copied to clipboard!"))
-                .catch(err => alert("Failed to copy report: " + err));
-        }
-
-        function sendReportToChat() {
-            if (!currentReportData) return;
-            const data = currentReportData;
-            
-            // Hide report panel
-            document.getElementById('report-panel').style.display = 'none';
-
-            // Fill query input
+        
+        function fillQuery(text) {
+            document.getElementById('pattern-panel').style.display = 'none';
             const input = document.getElementById('query-input');
-            input.value = `Analyze shift performance for ${data.label} on ${data.date}: OEE was ${data.metrics.oee_percent}%, downtime was ${data.metrics.total_downtime_mins} mins, failed bags were ${data.metrics.total_failed_bags}, and wastage was ${data.metrics.total_wastage_kg} kg. What are the key bottlenecks?`;
-            
-            // Trigger input dispatch
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-
-            // Submit form
-            const form = document.getElementById('chat-form');
-            if (form) {
-                const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
-                form.dispatchEvent(submitEvent);
-            }
+            input.value = text;
+            input.focus();
         }
 
         // Voice Input via Web Speech API
@@ -2212,7 +2066,7 @@ ${fbText || '   None'}
         })();
 
         // Setup EventSource for Backend Logs
-        const logSource = new EventSource('/api/logs');
+        
         logSource.addEventListener('log', function(e) {
             const data = JSON.parse(e.data);
             const consoleOutput = document.getElementById('backend-console-output');
@@ -2238,6 +2092,19 @@ ${fbText || '   None'}
         function scrollConsoleToBottom() {
             const consoleOutput = document.getElementById('backend-console-output');
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        async function clearCache() {
+            try {
+                const response = await fetch(`/clear_cache`, { method: 'POST' });
+                if (response.ok) {
+                    addSystemMessage("🧹 Cache cleared successfully.");
+                } else {
+                    addSystemMessage("⚠️ Failed to clear cache.");
+                }
+            } catch (err) {
+                addSystemMessage(`⚠️ Error clearing cache: ${err}`);
+            }
         }
     </script>
 
