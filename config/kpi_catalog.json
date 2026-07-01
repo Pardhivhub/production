@@ -558,6 +558,101 @@
         "date_range"
       ],
       "rounding": 2
+    },
+    "Total_Dumps": {
+      "metric": "Total_Dumps",
+      "aliases": [
+        "total dumps",
+        "dumps"
+      ],
+      "type": "direct_aggregate_kpi",
+      "table": "ega_details_data",
+      "aggregates": {
+        "TD": "SUM(total_dumps)"
+      },
+      "formula": "TD",
+      "query": "SELECT SUM(total_dumps) AS total_dumps FROM itciot.ega_details_data",
+      "groupable_by": [
+        "machine_id",
+        "machine_name",
+        "loop_id",
+        "grammage"
+      ],
+      "filters": [
+        "machine_id",
+        "loop_id",
+        "date_range"
+      ]
+    },
+    "Over_Scale_Bags": {
+      "metric": "Over_Scale_Bags",
+      "aliases": [
+        "over scale bags",
+        "over-scale bags",
+        "overscale"
+      ],
+      "type": "direct_aggregate_kpi",
+      "table": "ega_details_data",
+      "aggregates": {
+        "OS": "SUM(over_scale)"
+      },
+      "formula": "OS",
+      "query": "SELECT SUM(over_scale) AS over_scale_bags FROM itciot.ega_details_data",
+      "groupable_by": [
+        "machine_id",
+        "machine_name",
+        "loop_id"
+      ],
+      "filters": [
+        "machine_id",
+        "date_range"
+      ]
+    },
+    "Total_Weight": {
+      "metric": "Total_Weight",
+      "aliases": [
+        "t_weight",
+        "total weight",
+        "total actual weight"
+      ],
+      "type": "direct_aggregate_kpi",
+      "table": "ega_details_data",
+      "aggregates": {
+        "TW": "SUM(t_weight)"
+      },
+      "formula": "TW",
+      "query": "SELECT SUM(t_weight) AS total_weight FROM itciot.ega_details_data",
+      "groupable_by": [
+        "machine_id",
+        "machine_name"
+      ],
+      "filters": [
+        "machine_id",
+        "date_range"
+      ]
+    },
+    "Good_Bags": {
+      "metric": "Good_Bags",
+      "aliases": [
+        "good bags",
+        "proper bags",
+        "accepted bags"
+      ],
+      "type": "direct_aggregate_kpi",
+      "table": "oee_details_data",
+      "aggregates": {
+        "GB": "SUM(good_bags)"
+      },
+      "formula": "GB",
+      "query": "SELECT SUM(good_bags) AS good_bags FROM itciot.oee_details_data",
+      "groupable_by": [
+        "machine_id",
+        "machine_name"
+      ],
+      "filters": [
+        "machine_id",
+        "date_range"
+      ]
     }
   },
   "relationships": [

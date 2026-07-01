@@ -752,20 +752,18 @@ async def stream_chat(req: QueryRequest):
             if sql_warnings:
                 logger.warning(f"SQL Validation Issues:\n" + "\n".join(sql_warnings))
                 
+                # Yield warnings so the frontend/test_runner can capture hallucinated columns
+                yield format_sse("pipeline", {
+                    "stage": "sql_validation",
+                    "status": "warning",
+                    "warnings": sql_warnings,
+                    "fixes_applied": [w for w in sql_warnings if "AUTO-FIX" in w]
+                })
+                
                 # If critical errors, use corrected SQL
                 if not is_valid and corrected_sql != sql:
                     logger.info(f"Using auto-corrected SQL:\nOriginal: {sql}\nCorrected: {corrected_sql}")
                     sql = corrected_sql
-                    
-                    # Notify user about auto-fixes
-                    auto_fix_msgs = [w for w in sql_warnings if "AUTO-FIX" in w]
-                    if auto_fix_msgs:
-                        yield format_sse("pipeline", {
-                            "stage": "sql_validation",
-                            "status": "auto_corrected",
-                            "warnings": sql_warnings,
-                            "fixes_applied": auto_fix_msgs
-                        })
                 elif not is_valid and corrected_sql == sql:
                     # Critical error but no auto-fix could be applied!
                     # Trigger the LLM to self-heal
@@ -774,6 +772,8 @@ async def stream_chat(req: QueryRequest):
             yield format_sse("pipeline", {"stage": "sql_generation", "status": "completed"})
 
         except Exception as e:
+            # Yield raw SQL error for test runner before generating conversational fallback
+            yield format_sse("sql_error", {"sql": sql if 'sql' in locals() else 'unknown', "error": str(e)})
             try:
                 explanation = await generator.explain_error_conversational(req.query, str(e), "sql_generation")
                 yield format_sse("answer", {"answer": explanation})
@@ -833,6 +833,8 @@ async def stream_chat(req: QueryRequest):
                 "results": results
             })
         except Exception as e:
+            # Yield raw SQL error for test runner before generating conversational fallback
+            yield format_sse("sql_error", {"sql": sql, "error": str(e)})
             try:
                 explanation = await generator.explain_error_conversational(req.query, str(e), "execution")
                 yield format_sse("answer", {"answer": explanation})

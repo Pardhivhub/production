@@ -267,52 +267,47 @@ class RAGExplorer:
 
 
 RULE_DESCRIPTIONS = {
-    "rule_A_aggregation.txt": (
-        "Time-series aggregation. Group by machine, hourly rows, daily totals, trend over time, sum per day, "
-        "average per hour, count per shift, total across dates. Use SUM() for countable metrics like bags, "
-        "wastage, downtime. NULLIF to avoid divide-by-zero errors in any division."
+    "oee_details_data_1.txt": (
+        "OEE details schema, columns run_duration, downtime_mins, good_bags, failed_bags, overlimit_count, target_speed, machine_id, loop_id, purpose, joins."
     ),
-    "rule_B_kpi_formulas.txt": (
-        "KPI formulas: Overall Equipment Effectiveness OEE percent, EGA Excess Give Away percent, "
-        "Availability percent, Quality percent, Performance percent. How to calculate OEE, EGA, "
-        "availability, quality, performance from raw columns. Do not use pre-calculated columns."
+    "oee_details_data_2.txt": (
+        "OEE calculations, availability formula, performance formula, quality formula, overall OEE formula, rules, AVG(oee) mistakes, division safety NULLIF."
     ),
-    "rule_C_mttr_mtbf.txt": (
-        "Mean Time To Repair MTTR, Mean Time Between Failures MTBF. Downtime calculation, error count "
-        "jaw jam error, fmd error, splice error, dump error, print check error, reg mark error. "
-        "Machine failure frequency, repair time, breakdown analysis."
+    "ega_details_data_1.txt": (
+        "EGA details schema, t_weight, theoretical_pack_weight, mean_weight, actual vs theoretical weight, giveaway loss, purpose, joins."
     ),
-    "rule_D_production_speed.txt": (
-        "Production speed BPM bags per minute, net efficiency percent, total production KG, "
-        "good bags produced, grammage, JSONB array unnesting, production weight, throughput, output rate."
+    "ega_details_data_2.txt": (
+        "EGA giveaway formula, weight sums, AVG(ega_percent) mistakes, division safety NULLIF, outlier cleaning, weight outliers, RF weight buckets, target weight."
     ),
-    "rule_E_machines_joins.txt": (
-        "Join machines table to production tables using machine_id. Link plants, lines, machines. "
-        "Foreign key joins between fact tables and dimension tables. gmiiot_lines, gmiiot_plants, machines."
+    "wastage_records_1.txt": (
+        "Wastage records schema, columns wastage_kg, failed_bag_rejection, filled_bag_rejection, manual_rejection_kg, plant_id, line_id, machine_id, shift, flavour, grammage, purpose, joins."
     ),
-    "rule_F_filtering.txt": (
-        "Filter by date range, specific date, time period, shift morning afternoon night, grammage size, "
-        "text search, ordering results highest lowest top bottom. WHERE clause date filter, BETWEEN, "
-        "date comparison, start time, end time, last week, this month."
+    "wastage_records_2.txt": (
+        "Wastage records JSON casting, wastage_breakdown, unaccounted_downtime_breakdown, shift comparisons, flavour ILIKE filtering, grammage format, production_start_time, production_end_time."
     ),
-    "rule_G_prohibited.txt": (
-        "Prohibited columns. Hallucinated columns that do not exist. Metrics the database cannot compute. "
-        "Forbidden fields. Columns to avoid. Invalid joins."
+    "production_speed_details_1.txt": (
+        "Production speed details schema, target_speed, speed_trend array, loop_id, machine_id, speed sensor active state, purpose, joins."
     ),
-    "rule_H_multi_machine.txt": (
-        "Compare multiple machines side by side. Machine 6 vs machine 7. GROUP BY machine_id. "
-        "Cross-grain CTEs for complex metrics. Common Table Expressions to avoid fan-out in JOINs. "
-        "Ratio of metrics across different tables, CTE pattern."
+    "production_speed_details_2.txt": (
+        "Speed trend jsonb array elements text unnesting, average speed, lateral join speed_trend, preset_master_uploader limits, speed calculations."
     ),
-    "rule_I_wastage.txt": (
-        "Wastage records table: wastage trend, total wastage kg, wastage over time, wastage by machine, "
-        "wastage by plant, wastage by line, wastage by flavour, rejected bags, manual rejection kg, "
-        "filled bag rejection, wastage breakdown, unaccounted downtime, operators, shift incharge, "
-        "JTA name, wastage last month, wastage this week, wastage today, flavour vs variant in wastage table."
+    "machines.txt": (
+        "Machines master catalog, machine_id, machine_name PM1 PM2, type_id, device_id, machine name joins."
     ),
-    "rule_J_output.txt": (
-        "SQL output format. Return only SELECT statement. No markdown, no backticks, no explanations. "
-        "Plant and line restrictions on OEE EGA tables. No plant_id or line_id in oee ega tables."
+    "gmiiot_lines.txt": (
+        "Lines master catalog, gmiiot_lines, loop_id, loop_name Line 1, plant_id, line joins."
+    ),
+    "gmiiot_plants.txt": (
+        "Plants master catalog, gmiiot_plants, plant_id, plant_name Unit 1 Unit 2, multi-table joins, plant join path."
+    ),
+    "preset_master_uploader.txt": (
+        "Presets master catalog, target_speed preset, SKU, grammage category, variant name Ridge Cut Flat Cut, machine_id, loop_id."
+    ),
+    "flavours.txt": (
+        "Flavours master catalog, flavour_id, flavour_name Salted Cheese Chilli, variant_name, product flavour mappings."
+    ),
+    "global_rules.txt": (
+        "Global SQL rules, Postgres syntax, case insensitive ILIKE, grouping date_trunc, division safety NULLIF, ranking ORDER BY LIMIT, temporal column selection, start_time vs production_start_time, outlier weight filtering."
     )
 }
 
@@ -360,10 +355,10 @@ class PromptRAG:
                 embedding_function=self.ef
             )
             ids, docs, metadatas = [], [], []
-            for path in r_dir.glob("*.txt"):
+            for path in r_dir.glob("*.md"):
                 filename = path.name
                 full_text = path.read_text(encoding="utf-8").strip()
-                desc = RULE_DESCRIPTIONS.get(filename, full_text)
+                desc = full_text
                 
                 ids.append(filename)
                 docs.append(desc)
@@ -384,7 +379,7 @@ class PromptRAG:
                 embedding_function=self.ef
             )
             ids, docs = [], []
-            for path in e_dir.glob("*.txt"):
+            for path in e_dir.glob("*.md"):
                 ids.append(path.name)
                 docs.append(path.read_text(encoding="utf-8").strip())
             if ids:
