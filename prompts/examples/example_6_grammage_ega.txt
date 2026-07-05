@@ -1,3 +1,3 @@
 Example 6 — Grouping by a custom entity (e.g. grammage or shift):
 Q: "What is the average EGA percent for each grammage size?"
-SQL: SELECT grammage, AVG(ega_percent) AS avg_ega FROM ega_details_data GROUP BY grammage ORDER BY avg_ega DESC
+SQL: SELECT grammage, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data GROUP BY grammage ORDER BY ega_percent DESC

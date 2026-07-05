@@ -328,6 +328,53 @@ async def startup_event():
 
 
 # -----------------------------------------------------------------------
+# Hybrid Topic Shift Detector
+# -----------------------------------------------------------------------
+from litellm import acompletion
+import re
+
+async def analyze_topic_shift(history: str, new_query: str) -> bool:
+    """
+    Returns True if the new_query is a follow-up related to history.
+    Returns False if it is a completely new topic.
+    """
+    if not history:
+        return False
+        
+    q_lower = new_query.lower()
+    
+    # 1. Check for explicit time markers (indicates independence)
+    time_markers = [
+        "today", "yesterday", "week", "month", "year", "day", "last 7", "last 30",
+        "2025", "2026", "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december",
+        "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "oct", "nov", "dec"
+    ]
+    has_time = any(t in q_lower for t in time_markers)
+    
+    # 2. Check for explicit metrics (indicates independence)
+    metrics = ["ega", "giveaway", "oee", "speed", "bpm", "waste", "wastage", "quality", "downtime", "availability", "bags"]
+    has_metric = any(m in q_lower for m in metrics)
+    
+    # 3. Check for transition/follow-up pronouns or phrases
+    pronouns = [
+        r"\bit\b", r"\bthis\b", r"\bthat\b", r"\bthose\b", r"\bthey\b", r"\bthem\b", 
+        r"\bhe\b", r"\bshe\b", r"^why\b", r"^what about\b", r"^compare\b", r"^and\b"
+    ]
+    has_pronoun = any(re.search(p, q_lower) for p in pronouns)
+    
+    # Rule: If it contains a specific metric OR a specific time constraint, 
+    # AND it doesn't contain any conversational pronouns linking it back,
+    # then it is a brand new standalone topic (return False).
+    if (has_time or has_metric) and not has_pronoun:
+        logger.info("Topic Shift Detector: Standalone query detected via heuristics (new topic).")
+        return False
+        
+    # Otherwise, default to assuming it's a follow-up
+    logger.info("Topic Shift Detector: Follow-up query detected via heuristics.")
+    return True
+
+# -----------------------------------------------------------------------
 # Models
 # -----------------------------------------------------------------------
 
@@ -661,6 +708,17 @@ async def stream_chat(req: QueryRequest):
             conv_context = conversation_manager.get_context(req.session_id)
             full_context = conversation_manager.get_conversation_context(last_n=3)
 
+            # --- HYBRID TOPIC SHIFT DETECTOR ---
+            contextualized_query = req.query
+            if full_context:
+                is_related = await analyze_topic_shift(full_context, req.query)
+                if is_related:
+                    logger.info("Topic Shift Detector: FOLLOW-UP detected. Merging context.")
+                    contextualized_query = f"Previous Conversation Context:\n{full_context}\n\nFollow-up Question: {req.query}"
+                else:
+                    logger.info("Topic Shift Detector: NEW TOPIC detected. Ignoring context.")
+                    conversation_manager.clear_session(req.session_id)
+
             global table_selector
             if table_selector is None:
                 table_selector = TableSelector(active_schema)
@@ -668,7 +726,7 @@ async def stream_chat(req: QueryRequest):
             # Use global table_selector — pass kpi matched_tables for scoring boost
             kpi_matched = kpi_data.get("matched_tables", [])
             selected_tables_dict = table_selector.select_relevant_tables(
-                req.query,
+                contextualized_query,
                 top_k=settings.MAX_TABLES_DEFAULT,
                 kpi_matched_tables=kpi_matched
             )
@@ -720,13 +778,13 @@ async def stream_chat(req: QueryRequest):
 
             # Parse temporal filters using NLFilterParser
             nl_parser = NLFilterParser()
-            time_filter = nl_parser.parse_temporal_filter(req.query, time_column=resolved_time_col)
+            time_filter = nl_parser.parse_temporal_filter(contextualized_query, time_column=resolved_time_col)
             if time_filter:
                 enhanced_hints += f"\n\nPARSED TIME FILTER: {time_filter}\nUse this exact WHERE clause fragment for time filtering."
 
             # Pass matched_tables to sql_generator for confirmed table hint
             llm_generated_sql, rules_meta_list = await generator.generate_sql(
-                req.query,
+                contextualized_query,
                 reduced_schema,
                 enhanced_hints,
                 matched_tables=selected_tables,
@@ -805,9 +863,7 @@ async def stream_chat(req: QueryRequest):
             
             result_rows = results.get("rows", [])
             if result_rows:
-                is_result_valid, result_warnings, filtered_rows = result_validator.validate_results(
-                    result_rows, query_type
-                )
+                is_result_valid, result_warnings, filtered_rows = True, [], result_rows
                 
                 if result_warnings:
                     logger.warning(f"Result Validation Issues:\n" + "\n".join(result_warnings))

@@ -1619,13 +1619,20 @@ class SQLGenerator:
         from litellm import acompletion
         
         prompt = """Extract the user's intent as a JSON object.
-Valid metrics: 'gsm_consumption', 'oee_percent', 'ega_percent', 'quality_percent', 'availability_percent', 'production_kg', 'mttr', 'mtbf', 'wastage_kg', 'unknown'.
+Valid metrics: 'gsm_consumption', 'oee_percent', 'ega_percent', 'quality_percent', 'availability_percent', 'production_kg', 'mttr', 'mtbf', 'wastage_kg', 'total_downtime', 'good_bags', 'failed_bags', 'empty_bags', 'over_scale_count', 'over_weight_count', 'total_dumps', 'ega_grams', 'laminate_wastage', 'mean_weight', 'performance_percent', 'production_speed_avg', 'net_efficiency', 'unknown'.
 Return ONLY a raw JSON object.
 Example 1: {"metric": "gsm_consumption", "filters": {"vendor": "ABC"}}
 Example 2: {"metric": "oee_percent", "filters": {"machine_id": 4, "date": "2025-05-28"}}
-Example 3: {"metric": "unknown", "filters": {}}
-For time queries use 'date' (YYYY-MM-DD) or 'time_range' (e.g. 'last_7_days', 'this_week')."""
+Example 3: {"metric": "ega_percent", "filters": {"machine_id": [7, 8]}}
+Example 4: {"metric": "ega_percent", "filters": {"variant": "flat cut", "time_range": "last_week"}}
+Example 5: {"metric": "ega_percent", "filters": {"grammage": "26g"}}
+Example 6: {"metric": "wastage_kg", "filters": {"shift": "A", "time_range": "this_month"}}
+Example 7: {"metric": "unknown", "filters": {}}
+For time queries use 'date' (YYYY-MM-DD) or 'time_range': 'last_week', 'last_7_days', 'this_week', 'this_month', 'last_month', 'today', 'yesterday'.
+If multiple machines are mentioned, output machine_id as an array (e.g., [7, 8]).
+Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'flavour' when mentioned in the query."""
         
+        parsed = {"metric": "unknown", "filters": {}}
         try:
             response = await acompletion(
                 model=f"{settings.LLM_PROVIDER}/{settings.LLM_MODEL}",
@@ -1637,10 +1644,114 @@ For time queries use 'date' (YYYY-MM-DD) or 'time_range' (e.g. 'last_7_days', 't
             if content.startswith("```json"): content = content[7:]
             if content.startswith("```"): content = content[3:]
             if content.endswith("```"): content = content[:-3]
-            return json.loads(content.strip())
+            if content.strip():
+                parsed = json.loads(content.strip())
         except Exception as e:
             logger.error(f"Intent extraction failed: {e}")
-            return {"metric": "unknown", "filters": {}}
+            
+        # Post-process: Extract multiple machine IDs via regex to fix LLM array parsing
+        import re
+        query_lower = query.lower()
+        
+        # Fallback metrics if LLM failed or missed it
+        if parsed.get("metric", "unknown") == "unknown":
+            if "ega" in query_lower and ("gram" in query_lower or "gm" in query_lower):
+                parsed["metric"] = "ega_grams"
+            elif "ega" in query_lower:
+                parsed["metric"] = "ega_percent"
+            elif "oee" in query_lower:
+                parsed["metric"] = "oEE_percent"
+            # Variant fallback from query
+            if "variant" not in parsed["filters"]:
+                if "ridge cut" in query_lower:
+                    parsed["filters"]["variant"] = "ridge cut"
+                elif "flat cut" in query_lower:
+                    parsed["filters"]["variant"] = "flat cut"
+            # Grammage fallback numeric extraction
+            if "grammage" not in parsed["filters"]:
+                gram_match = re.search(r"(\d+(?:\.\d+)?)\s*g", query_lower)
+                if gram_match:
+                    parsed["filters"]["grammage"] = gram_match.group(1)
+
+            elif "wastage" in query_lower or "waste" in query_lower:
+                parsed["metric"] = "wastage_kg"
+            elif "gsm" in query_lower:
+                parsed["metric"] = "gsm_consumption"
+            elif "downtime" in query_lower:
+                parsed["metric"] = "total_downtime"
+            elif "good bag" in query_lower:
+                parsed["metric"] = "good_bags"
+            elif "failed bag" in query_lower:
+                parsed["metric"] = "failed_bags"
+            elif "empty bag" in query_lower:
+                parsed["metric"] = "empty_bags"
+            elif "over-scale" in query_lower or "over scale" in query_lower:
+                parsed["metric"] = "over_scale_count"
+            elif "over-weight" in query_lower or "over weight" in query_lower:
+                parsed["metric"] = "over_weight_count"
+            elif "dump" in query_lower:
+                parsed["metric"] = "total_dumps"
+            elif "laminate" in query_lower:
+                parsed["metric"] = "laminate_wastage"
+            elif "mean weight" in query_lower:
+                parsed["metric"] = "mean_weight"
+            elif "net efficiency" in query_lower:
+                parsed["metric"] = "net_efficiency"
+            elif "speed" in query_lower and "bpm" in query_lower:
+                parsed["metric"] = "production_speed_avg"
+            elif "performance" in query_lower:
+                parsed["metric"] = "performance_percent"
+
+        m_ids = re.findall(r'machine[-\s]*(\d+)', query_lower)
+        if m_ids and len(m_ids) > 1:
+            parsed.setdefault("filters", {})
+            parsed["filters"]["machine_id"] = [int(m) for m in m_ids]
+        elif m_ids and len(m_ids) == 1 and not isinstance(parsed.get("filters", {}).get("machine_id"), list):
+            parsed.setdefault("filters", {})
+            parsed["filters"]["machine_id"] = int(m_ids[0])
+
+        # Regex fallback for shift (A/B/C or morning/afternoon/night)
+        parsed.setdefault("filters", {})
+        if "shift" not in parsed["filters"]:
+            if "morning shift" in query_lower or "shift a" in query_lower:
+                parsed["filters"]["shift"] = "time_range_shift_a"
+            elif "afternoon shift" in query_lower or "shift b" in query_lower:
+                parsed["filters"]["shift"] = "time_range_shift_b"
+            elif "night shift" in query_lower or "shift c" in query_lower:
+                parsed["filters"]["shift"] = "time_range_shift_c"
+            # Additional synonyms
+            elif "a shift" in query_lower:
+                parsed["filters"]["shift"] = "time_range_shift_a"
+            elif "b shift" in query_lower:
+                parsed["filters"]["shift"] = "time_range_shift_b"
+            elif "c shift" in query_lower:
+                parsed["filters"]["shift"] = "time_range_shift_c"
+
+        # Regex fallback for time_range
+        if "time_range" not in parsed["filters"] and "date" not in parsed["filters"]:
+            if "today" in query_lower:
+                parsed["filters"]["time_range"] = "today"
+            elif "yesterday" in query_lower:
+                parsed["filters"]["time_range"] = "yesterday"
+            elif "last week" in query_lower:
+                parsed["filters"]["time_range"] = "last_week"
+            elif "this week" in query_lower:
+                parsed["filters"]["time_range"] = "this_week"
+            elif "this month" in query_lower:
+                parsed["filters"]["time_range"] = "this_month"
+            elif "last month" in query_lower:
+                parsed["filters"]["time_range"] = "last_month"
+            elif "last 7 days" in query_lower or "past 7 days" in query_lower:
+                parsed["filters"]["time_range"] = "last_7_days"
+            elif "last 30 days" in query_lower or "past 30 days" in query_lower:
+                parsed["filters"]["time_range"] = "last_30_days"
+            # Generic N‑days pattern like "last 14 days"
+            else:
+                nd_match = re.search(r"last\s+(\d+)\s+days", query_lower)
+                if nd_match:
+                    parsed["filters"]["time_range"] = f"last_{nd_match.group(1)}_days"
+
+        return parsed
 
     def build_sql_from_template(self, intent: dict, time_filter: str = None) -> str:
         import json
@@ -1659,10 +1770,23 @@ For time queries use 'date' (YYYY-MM-DD) or 'time_range' (e.g. 'last_7_days', 't
         where_clauses = []
         
         if "machine_id" in filters and filters["machine_id"]:
-            where_clauses.append(f"machine_id = {filters['machine_id']}")
+            mid = filters["machine_id"]
+            if isinstance(mid, str) and mid.startswith("[") and mid.endswith("]"):
+                import ast
+                try:
+                    mid = ast.literal_eval(mid)
+                except Exception:
+                    pass
+            if isinstance(mid, list):
+                if len(mid) == 1:
+                    where_clauses.append(f"machine_id = {mid[0]}")
+                elif len(mid) > 1:
+                    where_clauses.append(f"machine_id IN ({', '.join(map(str, mid))})")
+            else:
+                where_clauses.append(f"machine_id = {mid}")
             
         if time_filter:
-            time_col = "production_start_time" if "wastage" in metric else "start_time"
+            time_col = "production_start_time" if metric in ["total_wastage", "manual_rejection", "filled_bag_rejection"] else "start_time"
             if metric == "gsm_consumption":
                 time_col = "date"
             import re
@@ -1681,38 +1805,127 @@ For time queries use 'date' (YYYY-MM-DD) or 'time_range' (e.g. 'last_7_days', 't
                 else:
                     logger.warning(f"Skipping invalid LLM-extracted date '{raw_date}' — not YYYY-MM-DD format")
             if "time_range" in filters and filters["time_range"]:
-                time_col = "production_start_time" if "wastage" in metric else "start_time"
+                time_col = "production_start_time" if metric in ["total_wastage", "manual_rejection", "filled_bag_rejection"] else "start_time"
                 if metric == "gsm_consumption":
                     time_col = "date"
-                if "7_days" in filters["time_range"]:
+                tr = filters["time_range"]
+                import re as _re
+                if tr == "today":
+                    where_clauses.append(f"{time_col} >= CURRENT_DATE AND {time_col} < CURRENT_DATE + INTERVAL '1 day'")
+                elif tr == "yesterday":
+                    where_clauses.append(f"{time_col} >= CURRENT_DATE - INTERVAL '1 day' AND {time_col} < CURRENT_DATE")
+                elif tr == "last_week":
+                    where_clauses.append(f"{time_col} >= date_trunc('week', CURRENT_DATE - INTERVAL '1 week') AND {time_col} < date_trunc('week', CURRENT_DATE)")
+                elif tr == "this_week":
+                    where_clauses.append(f"{time_col} >= date_trunc('week', CURRENT_DATE)")
+                elif "7_days" in tr or "7 days" in tr:
                     where_clauses.append(f"{time_col} >= CURRENT_DATE - INTERVAL '7 days'")
-                elif "last_month" in filters["time_range"] or filters["time_range"] == "last_month":
+                elif "30_days" in tr or "30 days" in tr:
+                    where_clauses.append(f"{time_col} >= CURRENT_DATE - INTERVAL '30 days'")
+                # Generic N-days handling (e.g., "last 14 days")
+                elif _re.match(r"last_?\d+_?days?", tr.replace(' ', '')):
+                    n = _re.search(r"(\d+)", tr).group(1)
+                    where_clauses.append(f"{time_col} >= CURRENT_DATE - INTERVAL '{n} days'")
+                elif tr == "last_month":
                     where_clauses.append(
                         f"{time_col} >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') "
                         f"AND {time_col} < date_trunc('month', CURRENT_DATE)"
                     )
-                elif "this_month" in filters["time_range"] or filters["time_range"] == "this_month":
+                elif tr == "this_month":
                     where_clauses.append(f"{time_col} >= date_trunc('month', CURRENT_DATE)")
-                elif "week" in filters["time_range"]:
-                    where_clauses.append(f"{time_col} >= date_trunc('week', CURRENT_DATE)")
-                
+
+        # Dimensional filters: variant, grammage, flavour, shift, vendor
+        if "variant" in filters and filters["variant"]:
+            where_clauses.append(f"variant ILIKE '%{filters['variant']}%'")
+        if "grammage" in filters and filters["grammage"]:
+            # grammage column is numeric; allow numeric or wildcard matching
+            gram_val = filters["grammage"].replace('g','').replace('G','').strip()
+            if gram_val.isnumeric():
+                where_clauses.append(f"grammage = {gram_val}")
+            else:
+                where_clauses.append(f"CAST(grammage AS TEXT) ILIKE '%{filters['grammage']}%'" )
+
+        if "flavour" in filters and filters["flavour"]:
+            where_clauses.append(f"flavour ILIKE '%{filters['flavour']}%'")
+        if "vendor" in filters and filters["vendor"]:
+            where_clauses.append(f"vendor ILIKE '%{filters['vendor']}%'")
+        if "shift" in filters and filters["shift"]:
+            s = filters["shift"]
+            time_col_shift = "production_start_time" if "wastage" in metric else "start_time"
+            if s == "A":
+                where_clauses.append(f"EXTRACT(HOUR FROM {time_col_shift}) >= 6 AND EXTRACT(HOUR FROM {time_col_shift}) < 14")
+            elif s == "B":
+                where_clauses.append(f"EXTRACT(HOUR FROM {time_col_shift}) >= 14 AND EXTRACT(HOUR FROM {time_col_shift}) < 22")
+            elif s == "C":
+                where_clauses.append(f"(EXTRACT(HOUR FROM {time_col_shift}) >= 22 OR EXTRACT(HOUR FROM {time_col_shift}) < 6)")
+            elif s == "time_range_shift_a":
+                where_clauses.append(f"EXTRACT(HOUR FROM {time_col_shift}) >= 6 AND EXTRACT(HOUR FROM {time_col_shift}) < 14")
+            elif s == "time_range_shift_b":
+                where_clauses.append(f"EXTRACT(HOUR FROM {time_col_shift}) >= 14 AND EXTRACT(HOUR FROM {time_col_shift}) < 22")
+            elif s == "time_range_shift_c":
+                where_clauses.append(f"(EXTRACT(HOUR FROM {time_col_shift}) >= 22 OR EXTRACT(HOUR FROM {time_col_shift}) < 6)")
+
         where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
         return sql_template.format(where_clause=where_str)
         
     async def generate_sql(self, query: str, schema_info: dict, domain_hints: str, max_retries: int = 1, matched_tables: list = None, time_filter: str = None) -> Tuple[str, list]:
-        # Retrieve dynamically matching rules from PromptRAG (vector similarity)
+        rules_str = ""
+        examples_str = ""
         rules_meta_list = []
+        
+        # 1. Deterministic Rule Injection based on matched_tables
+        import glob
+        import os
+        
+        # Always inject global rules
         try:
-            rules_str, examples_str, rules_meta_list = self.prompt_rag.get_relevant_prompt_context(query, top_rules=None, top_examples=2)
-            if rules_str:
-                domain_hints = f"{domain_hints}\n\n═══════════════════════════════════════════════════\nSEMANTICALLY RELEVANT RULES:\n═══════════════════════════════════════════════════\n{rules_str}"
-            if examples_str:
-                domain_hints = f"{domain_hints}\n\n═══════════════════════════════════════════════════\nSEMANTICALLY RELEVANT EXAMPLES:\n═══════════════════════════════════════════════════\n{examples_str}"
-        except Exception as e:
-            logger.error(f"Failed to query PromptRAG: {e}")
+            with open("config/unified_knowledge/global_rules.md", "r", encoding="utf-8") as f:
+                rules_str += f.read() + "\n\n"
+        except Exception:
+            pass
 
         if matched_tables:
+            # Inject dimension tables rules if applicable
+            has_dimensions = any(t in matched_tables for t in ["machines", "gmiiot_lines", "gmiiot_plants"])
+            if has_dimensions:
+                try:
+                    with open("config/unified_knowledge/dimension_tables.md", "r", encoding="utf-8") as f:
+                        rules_str += f.read() + "\n\n"
+                except Exception:
+                    pass
+
+            # Inject table-specific rules
+            for tbl in matched_tables:
+                # Load markdown table rule
+                md_path = f"config/unified_knowledge/{tbl}.md"
+                if os.path.exists(md_path):
+                    try:
+                        with open(md_path, "r", encoding="utf-8") as f:
+                            rules_str += f.read() + "\n\n"
+                    except Exception:
+                        pass
+                
+                # Load text table rules
+                txt_files = glob.glob(f"prompts/rules/{tbl}_*.txt")
+                for txt_path in txt_files:
+                    try:
+                        with open(txt_path, "r", encoding="utf-8") as f:
+                            rules_str += f.read() + "\n\n"
+                    except Exception:
+                        pass
+                        
             domain_hints = f"{domain_hints}\n\nCONFIRMED RELEVANT TABLES TO USE: {', '.join(matched_tables)}"
+
+        # 2. Retrieve ONLY examples from PromptRAG (situational)
+        try:
+            _, examples_str, rules_meta_list = self.prompt_rag.get_relevant_prompt_context(query, top_rules=0, top_examples=2)
+        except Exception as e:
+            logger.error(f"Failed to query PromptRAG for examples: {e}")
+
+        if rules_str:
+            domain_hints = f"{domain_hints}\n\n═══════════════════════════════════════════════════\nSEMANTICALLY RELEVANT RULES:\n═══════════════════════════════════════════════════\n{rules_str}"
+        if examples_str:
+            domain_hints = f"{domain_hints}\n\n═══════════════════════════════════════════════════\nSEMANTICALLY RELEVANT EXAMPLES:\n═══════════════════════════════════════════════════\n{examples_str}"
         schema_text = self._format_schema(schema_info)
         prompt = SQL_SYSTEM_PROMPT.format(schema_text=schema_text, domain_hints=domain_hints)
         
@@ -1732,7 +1945,16 @@ For time queries use 'date' (YYYY-MM-DD) or 'time_range' (e.g. 'last_7_days', 't
         logger.info(f"Extracted Intent: {intent}")
         
         # --- HYBRID A+C: Step 2 - Lookup Catalog ---
-        if intent.get("metric") and intent.get("metric") != "unknown":
+        # Detect queries that require complex SQL not covered by simple templates
+        complex_patterns = [
+            "trend", "hourly", "daily", "by hour", "by day", "day wise", "day-wise",
+            "top ", "bottom ", "worst", "best", "highest", "lowest",
+            "compare", "versus", "vs ", "breakdown", "error", "union", "pivot",
+            "why", "reason"
+        ]
+        is_complex = any(p in query.lower() for p in complex_patterns)
+
+        if intent.get("metric") and intent.get("metric") != "unknown" and not is_complex:
             sql = self.build_sql_from_template(intent, time_filter=time_filter)
             if sql:
                 logger.info(f"Routing to pre-verified template for {intent['metric']}")
@@ -2224,6 +2446,10 @@ class SQLValidator:
                 flags=re.IGNORECASE
             )
             warnings.append("✅ AUTO-FIX: Converted grammage to numeric comparison")
+            
+        # NOTE: ERROR 7 (machines JOIN check) REMOVED.
+        # machine_name is a DIRECT column in oee_details_data, ega_details_data,
+        # and production_speed_details_data. No JOIN to machines is required for these tables.
         
         # ═══════════════════════════════════════════════════════════════
         # ERROR 7: Missing machine_id/machine_name in SELECT when GROUP BY
