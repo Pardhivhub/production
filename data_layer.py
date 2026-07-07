@@ -242,7 +242,7 @@ class SemanticLayer:
                     continue
                 try:
                     prefix = "itciot." if "postgres" in self.db.db_url else ""
-                    query = f"SELECT DISTINCT {col_name} FROM {prefix}{table_name} WHERE {col_name} IS NOT NULL LIMIT 50"
+                    query = f'SELECT DISTINCT "{col_name}" FROM {prefix}{table_name} WHERE "{col_name}" IS NOT NULL LIMIT 50'
                     res = await self.db.execute_query(query)
                     for row in res.get("rows", []):
                         val = row.get(col.get("name"))

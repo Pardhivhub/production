@@ -52,21 +52,22 @@ class OllamaEmbeddingFunction(EmbeddingFunction):
         except Exception as e:
             logger.error(f"Batch embedding failed: {e}. Falling back to single-item fallback.")
             
-            # Fallback to single-item processing or legacy endpoint just in case
+            # Fallback to single-item processing using the legacy endpoint
             embeddings: List[List[float]] = []
+            legacy_url = self.url.replace("/api/embed", "/api/embeddings")
             for text in inputs:
                 try:
                     response = requests.post(
-                        self.url,
-                        json={"model": self.model_name, "input": text},
+                        legacy_url,
+                        json={"model": self.model_name, "prompt": text},
                         timeout=30,
                     )
                     response.raise_for_status()
                     res_json = response.json()
-                    if "embeddings" in res_json:
-                        embeddings.append(res_json["embeddings"][0])
-                    else:
+                    if "embedding" in res_json:
                         embeddings.append(res_json["embedding"])
+                    else:
+                        embeddings.append(res_json.get("embeddings", [[0.0]*384])[0])
                 except Exception as ex:
                     logger.error(f"Fallback failed for text (len={len(text)}): {ex}")
                     embeddings.append([0.0] * 384)
