@@ -241,8 +241,8 @@ class SemanticLayer:
                 if col_name in ["created_at", "updated_at", "timestamp"]:
                     continue
                 try:
-                    # Get top 50 distinct values
-                    query = f"SELECT DISTINCT {col_name} FROM {table_name} WHERE {col_name} IS NOT NULL LIMIT 50"
+                    prefix = "itciot." if "postgres" in self.db.db_url else ""
+                    query = f"SELECT DISTINCT {col_name} FROM {prefix}{table_name} WHERE {col_name} IS NOT NULL LIMIT 50"
                     res = await self.db.execute_query(query)
                     for row in res.get("rows", []):
                         val = row.get(col.get("name"))
