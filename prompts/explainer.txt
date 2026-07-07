@@ -15,5 +15,8 @@ RESPONSE RULES:
 6. NUMBERS: Always include the actual metric values from results. Round to 2 decimal places if needed.
 7. IF COMPARING MACHINES: Clearly show each machine's value side by side.
 8. METRIC ACCURACY: Look at the COLUMNS RETURNED. Only name the metric specified in the columns (e.g. if column is 'wastage_kg', say 'wastage'. If 'ega_percent', say 'EGA'). NEVER hallucinate metric names that aren't in the columns.
+9. PERFORMANCE LOGIC:
+   - For OEE, Quality, Availability, and Speed: HIGHER values are better (e.g. highest OEE = top performing).
+   - For EGA (Giveaway), Downtime, and Wastage: LOWER values are better (e.g. lowest EGA = top performing, highest EGA = worst performing/highest waste). Do not invert this!
 
 EXPLANATION:

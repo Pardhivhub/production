@@ -60,6 +60,8 @@
 - Join `gmiiot_plants` on `wastage_records.plant_id = gmiiot_plants.plant_id` for plant name.
 - Join `gmiiot_lines` on `wastage_records.line_id = gmiiot_lines.id` for line name. (`gmiiot_lines` PK is `id`, column is `line_name`).
 - `machines` PK is `id`. Join: `JOIN machines m ON t.machine_id = m.id`
+- ✓ `variant` and `grammage` are ALREADY columns directly in `ega_details_data`, `oee_details_data`, `production_speed_details_data`, and `wastage_records`.
+- ✗ NEVER join any other table (like `gsm_usage_details` or `variant` or `ega_details_data`) to get `variant` or `grammage` for OEE/speed queries. Use them directly from the main table.
 
 ## 11. NESTED AGGREGATES & COMPLEX MATH
 - 🚨 CRITICAL: PostgreSQL FORBIDS nested aggregates like `AVG(SUM(good_bags))`, `MAX(SUM(t_weight))`, or `MIN(((SUM(a)-SUM(b))/SUM(c)))`.
@@ -81,3 +83,6 @@ SQL: SELECT machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULL
 
 Q: OEE for each machine today
 SQL: SELECT machine_name, (((SUM(good_bags)/NULLIF(SUM(1)*60-SUM(downtime_mins),0))/NULLIF(AVG(target_speed),0)*100) * ((SUM(1)*60-SUM(downtime_mins))/NULLIF(SUM(1)*60,0)*100) * (CASE WHEN SUM(good_bags)=0 THEN 0 ELSE 100-((SUM(overlimit_count)+SUM(failed_bags))/NULLIF(SUM(good_bags),0))*100 END)) / 10000 AS oee_percent FROM oee_details_data WHERE start_time >= CURRENT_DATE AND start_time < CURRENT_DATE + INTERVAL '1 day' GROUP BY machine_id, machine_name ORDER BY oee_percent DESC
+
+Q: Average production speed by variant and grammage
+SQL: SELECT variant, grammage, AVG(speed.value::numeric) AS avg_speed_bpm FROM production_speed_details_data psd CROSS JOIN LATERAL jsonb_array_elements_text(psd.production_speed_bpm) AS speed(value) GROUP BY variant, grammage ORDER BY avg_speed_bpm DESC

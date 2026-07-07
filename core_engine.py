@@ -1623,13 +1623,13 @@ Valid metrics: 'gsm_consumption', 'oee_percent', 'ega_percent', 'quality_percent
 Return ONLY a raw JSON object.
 Example 1: {"metric": "gsm_consumption", "filters": {"vendor": "ABC"}}
 Example 2: {"metric": "oee_percent", "filters": {"machine_id": 4, "date": "2025-05-28"}}
-Example 3: {"metric": "ega_percent", "filters": {"machine_id": [7, 8]}}
+Example 3: {"metric": "ega_percent", "filters": {"machine_id": [3, 5]}}
 Example 4: {"metric": "ega_percent", "filters": {"variant": "flat cut", "time_range": "last_week"}}
 Example 5: {"metric": "ega_percent", "filters": {"grammage": "26g"}}
 Example 6: {"metric": "wastage_kg", "filters": {"shift": "A", "time_range": "this_month"}}
 Example 7: {"metric": "unknown", "filters": {}}
 For time queries use 'date' (YYYY-MM-DD) or 'time_range': 'last_week', 'last_7_days', 'this_week', 'this_month', 'last_month', 'today', 'yesterday'.
-If multiple machines are mentioned, output machine_id as an array (e.g., [7, 8]).
+CRITICAL: Do NOT output a 'machine_id' filter unless the user EXPLICITLY asks for a specific machine by number! If 'all machines', 'which machine', or no specific machine is mentioned, do NOT output a machine_id filter.
 Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'flavour' when mentioned in the query."""
         
         parsed = {"metric": "unknown", "filters": {}}
@@ -1648,19 +1648,75 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
                 parsed = json.loads(content.strip())
         except Exception as e:
             logger.error(f"Intent extraction failed: {e}")
-            
+        # Extract the raw user query if it's wrapped in context
+        raw_query = query
+        if "Follow-up Question:" in query:
+            raw_query = query.split("Follow-up Question:")[-1].strip()
+        
+        parsed["_original_query"] = raw_query
+        
         # Post-process: Extract multiple machine IDs via regex to fix LLM array parsing
         import re
-        query_lower = query.lower()
+        query_lower = raw_query.lower()
         
-        # Fallback metrics if LLM failed or missed it
-        if parsed.get("metric", "unknown") == "unknown":
-            if "ega" in query_lower and ("gram" in query_lower or "gm" in query_lower):
+        # --- Post-process: Force Keyword-Based Metric Overrides ---
+        if "oee" in query_lower:
+            parsed["metric"] = "oee_percent"
+        elif "ega" in query_lower:
+            if "gram" in query_lower or "gm" in query_lower:
                 parsed["metric"] = "ega_grams"
-            elif "ega" in query_lower:
+            else:
                 parsed["metric"] = "ega_percent"
-            elif "oee" in query_lower:
-                parsed["metric"] = "oEE_percent"
+        elif "wastage" in query_lower or "waste" in query_lower:
+            parsed["metric"] = "wastage_kg"
+        elif "gsm" in query_lower:
+            parsed["metric"] = "gsm_consumption"
+        elif "downtime" in query_lower:
+            parsed["metric"] = "total_downtime"
+        elif "good bag" in query_lower:
+            parsed["metric"] = "good_bags"
+        elif "failed bag" in query_lower:
+            parsed["metric"] = "failed_bags"
+        elif "empty bag" in query_lower:
+            parsed["metric"] = "empty_bags"
+        elif "over-scale" in query_lower or "over scale" in query_lower:
+            parsed["metric"] = "over_scale_count"
+        elif "over-weight" in query_lower or "over weight" in query_lower:
+            parsed["metric"] = "over_weight_count"
+        elif "dump" in query_lower:
+            parsed["metric"] = "total_dumps"
+        elif "laminate" in query_lower:
+            parsed["metric"] = "laminate_wastage"
+        elif "mean weight" in query_lower:
+            parsed["metric"] = "mean_weight"
+        elif "net efficiency" in query_lower:
+            parsed["metric"] = "net_efficiency"
+        elif "speed" in query_lower and "bpm" in query_lower:
+            parsed["metric"] = "production_speed_avg"
+        elif "performance" in query_lower:
+            parsed["metric"] = "performance_percent"
+
+        # --- Post-process: Sanitize Grammage in Variant ---
+        if "filters" in parsed:
+            # If variant contains numbers (e.g. "26g"), extract and shift to grammage
+            if "variant" in parsed["filters"]:
+                v_val = str(parsed["filters"]["variant"]).lower()
+                if any(c.isdigit() for c in v_val):
+                    digits = "".join(c for c in v_val if c.isdigit())
+                    if digits:
+                        parsed["filters"]["grammage"] = int(digits)
+                        del parsed["filters"]["variant"]
+                        
+            # Ensure grammage is strictly numeric (remove 'g' suffix)
+            if "grammage" in parsed["filters"]:
+                g_val = str(parsed["filters"]["grammage"]).lower()
+                digits = "".join(c for c in g_val if c.isdigit() or c == ".")
+                if digits:
+                    try:
+                        parsed["filters"]["grammage"] = float(digits) if "." in digits else int(digits)
+                    except ValueError:
+                        pass
+
             # Variant fallback from query
             if "variant" not in parsed["filters"]:
                 if "ridge cut" in query_lower:
@@ -1671,36 +1727,10 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
             if "grammage" not in parsed["filters"]:
                 gram_match = re.search(r"(\d+(?:\.\d+)?)\s*g", query_lower)
                 if gram_match:
-                    parsed["filters"]["grammage"] = gram_match.group(1)
-
-            elif "wastage" in query_lower or "waste" in query_lower:
-                parsed["metric"] = "wastage_kg"
-            elif "gsm" in query_lower:
-                parsed["metric"] = "gsm_consumption"
-            elif "downtime" in query_lower:
-                parsed["metric"] = "total_downtime"
-            elif "good bag" in query_lower:
-                parsed["metric"] = "good_bags"
-            elif "failed bag" in query_lower:
-                parsed["metric"] = "failed_bags"
-            elif "empty bag" in query_lower:
-                parsed["metric"] = "empty_bags"
-            elif "over-scale" in query_lower or "over scale" in query_lower:
-                parsed["metric"] = "over_scale_count"
-            elif "over-weight" in query_lower or "over weight" in query_lower:
-                parsed["metric"] = "over_weight_count"
-            elif "dump" in query_lower:
-                parsed["metric"] = "total_dumps"
-            elif "laminate" in query_lower:
-                parsed["metric"] = "laminate_wastage"
-            elif "mean weight" in query_lower:
-                parsed["metric"] = "mean_weight"
-            elif "net efficiency" in query_lower:
-                parsed["metric"] = "net_efficiency"
-            elif "speed" in query_lower and "bpm" in query_lower:
-                parsed["metric"] = "production_speed_avg"
-            elif "performance" in query_lower:
-                parsed["metric"] = "performance_percent"
+                    try:
+                        parsed["filters"]["grammage"] = float(gram_match.group(1)) if "." in gram_match.group(1) else int(gram_match.group(1))
+                    except ValueError:
+                        pass
 
         m_ids = re.findall(r'machine[-\s]*(\d+)', query_lower)
         if m_ids and len(m_ids) > 1:
@@ -1709,6 +1739,12 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
         elif m_ids and len(m_ids) == 1 and not isinstance(parsed.get("filters", {}).get("machine_id"), list):
             parsed.setdefault("filters", {})
             parsed["filters"]["machine_id"] = int(m_ids[0])
+
+        loop_ids = re.findall(r'loop[-\s]*(\d+)|line[-\s]*(\d+)', query_lower)
+        if loop_ids:
+            lid = next((g for groups in loop_ids for g in groups if g), None)
+            if lid:
+                parsed.setdefault("filters", {})["loop_id"] = int(lid)
 
         # Regex fallback for shift (A/B/C or morning/afternoon/night)
         parsed.setdefault("filters", {})
@@ -1777,13 +1813,31 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
                     mid = ast.literal_eval(mid)
                 except Exception:
                     pass
-            if isinstance(mid, list):
-                if len(mid) == 1:
-                    where_clauses.append(f"machine_id = {mid[0]}")
-                elif len(mid) > 1:
-                    where_clauses.append(f"machine_id IN ({', '.join(map(str, mid))})")
-            else:
-                where_clauses.append(f"machine_id = {mid}")
+            
+            # If string, extract only digits or discard if no digits
+            if isinstance(mid, str):
+                cleaned_mid = "".join(c for c in mid if c.isdigit())
+                mid = int(cleaned_mid) if cleaned_mid else None
+
+            if mid is not None:
+                if isinstance(mid, list):
+                    mid_ints = []
+                    for x in mid:
+                        if isinstance(x, int):
+                            mid_ints.append(x)
+                        elif isinstance(x, str):
+                            cx = "".join(c for c in x if c.isdigit())
+                            if cx:
+                                mid_ints.append(int(cx))
+                    if len(mid_ints) == 1:
+                        where_clauses.append(f"machine_id = {mid_ints[0]}")
+                    elif len(mid_ints) > 1:
+                        where_clauses.append(f"machine_id IN ({', '.join(map(str, mid_ints))})")
+                elif isinstance(mid, (int, float)):
+                    where_clauses.append(f"machine_id = {int(mid)}")
+
+        if "loop_id" in filters and filters["loop_id"]:
+            where_clauses.append(f"loop_id = {int(filters['loop_id'])}")
             
         if time_filter:
             time_col = "production_start_time" if metric in ["total_wastage", "manual_rejection", "filled_bag_rejection"] else "start_time"
@@ -1798,12 +1852,14 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
                 time_col = "production_start_time" if "wastage" in metric else "start_time"
                 if metric == "gsm_consumption":
                     time_col = "date"
-                # Only use if it's a full valid YYYY-MM-DD (not partial like "2025-05")
+                # Support YYYY-MM format or full YYYY-MM-DD
                 import re as _re
-                if _re.match(r'^\d{4}-\d{2}-\d{2}$', raw_date):
+                if _re.match(r'^\d{4}-\d{2}$', raw_date):
+                    where_clauses.append(f"{time_col} >= '{raw_date}-01' AND {time_col} < DATE_TRUNC('month', '{raw_date}-01'::date + INTERVAL '1 month')")
+                elif _re.match(r'^\d{4}-\d{2}-\d{2}$', raw_date):
                     where_clauses.append(f"{time_col}::date = '{raw_date}'")
                 else:
-                    logger.warning(f"Skipping invalid LLM-extracted date '{raw_date}' — not YYYY-MM-DD format")
+                    logger.warning(f"Skipping invalid LLM-extracted date '{raw_date}' — not YYYY-MM or YYYY-MM-DD format")
             if "time_range" in filters and filters["time_range"]:
                 time_col = "production_start_time" if metric in ["total_wastage", "manual_rejection", "filled_bag_rejection"] else "start_time"
                 if metric == "gsm_consumption":
@@ -1836,10 +1892,15 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
 
         # Dimensional filters: variant, grammage, flavour, shift, vendor
         if "variant" in filters and filters["variant"]:
-            where_clauses.append(f"variant ILIKE '%{filters['variant']}%'")
+            query_lower = intent.get("_original_query", "").lower()
+            variant_val = filters["variant"].lower()
+            if not any(word in query_lower for word in variant_val.split()):
+                del filters["variant"]
+            else:
+                where_clauses.append(f"variant ILIKE '%{filters['variant']}%'")
         if "grammage" in filters and filters["grammage"]:
             # grammage column is numeric; allow numeric or wildcard matching
-            gram_val = filters["grammage"].replace('g','').replace('G','').strip()
+            gram_val = str(filters["grammage"]).replace('g','').replace('G','').strip()
             if gram_val.isnumeric():
                 where_clauses.append(f"grammage = {gram_val}")
             else:
@@ -1947,10 +2008,10 @@ Always capture: 'variant', 'grammage', 'shift' (use 'A'/'B'/'C'), 'vendor', 'fla
         # --- HYBRID A+C: Step 2 - Lookup Catalog ---
         # Detect queries that require complex SQL not covered by simple templates
         complex_patterns = [
-            "trend", "hourly", "daily", "by hour", "by day", "day wise", "day-wise",
+            "trend", "hourly", "daily", "by hour", "per hour", "by day", "day wise", "day-wise",
             "top ", "bottom ", "worst", "best", "highest", "lowest",
             "compare", "versus", "vs ", "breakdown", "error", "union", "pivot",
-            "why", "reason"
+            "why", "reason", "by ", "group by"
         ]
         is_complex = any(p in query.lower() for p in complex_patterns)
 

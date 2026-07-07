@@ -48,15 +48,15 @@
       "type": "derived_kpi",
       "table": "oee_details_data",
       "aggregates": {
-        "H": "SUM(1)",
+        "RD": "SUM(run_duration)",
         "DT": "SUM(downtime_mins)",
         "GB": "SUM(good_bags)",
         "FB": "SUM(failed_bags)",
         "OL": "SUM(overlimit_count)",
         "TS": "AVG(target_speed)"
       },
-      "formula": "((GB / NULLIF((H*60 - DT),0)) / TS * 100) * ((H*60 - DT) / NULLIF((H*60),0) * 100) * (CASE WHEN GB = 0 THEN 0 ELSE (100 - ((OL + FB) / GB) * 100) END) / 10000",
-      "query": "SELECT (((SUM(good_bags) / NULLIF((SUM(1)*60 - SUM(downtime_mins)),0)) / AVG(target_speed) * 100) * ((SUM(1)*60 - SUM(downtime_mins)) / NULLIF((SUM(1)*60),0) * 100) * (CASE WHEN SUM(good_bags)=0 THEN 0 ELSE (100 - ((SUM(overlimit_count)+SUM(failed_bags))/SUM(good_bags))*100) END)) / 10000 AS OEE_percent FROM oee_details_data",
+      "formula": "((GB / NULLIF(RD,0)) / TS * 100) * (RD / NULLIF((RD + DT),0) * 100) * (CASE WHEN GB = 0 THEN 0 ELSE (100 - ((OL + FB) / GB) * 100) END) / 10000",
+      "query": "SELECT (((SUM(good_bags) / NULLIF(SUM(run_duration),0)) / AVG(target_speed) * 100) * (SUM(run_duration) / NULLIF((SUM(run_duration) + SUM(downtime_mins)),0) * 100) * (CASE WHEN SUM(good_bags)=0 THEN 0 ELSE (100 - ((SUM(overlimit_count)+SUM(failed_bags))/SUM(good_bags))*100) END)) / 10000 AS OEE_percent FROM oee_details_data",
       "groupable_by": [
         "machine_id",
         "machine_name",
@@ -219,11 +219,11 @@
       "type": "derived_kpi",
       "table": "oee_details_data",
       "aggregates": {
-        "H": "SUM(1)",
+        "RD": "SUM(run_duration)",
         "DT": "SUM(downtime_mins)"
       },
-      "formula": "((H*60 - DT) / NULLIF((H*60),0)) * 100",
-      "query": "SELECT ((SUM(1)*60 - SUM(downtime_mins)) / NULLIF((SUM(1)*60),0)) * 100 AS Availability_percent FROM oee_details_data",
+      "formula": "(RD / NULLIF((RD + DT),0)) * 100",
+      "query": "SELECT (SUM(run_duration) / NULLIF((SUM(run_duration) + SUM(downtime_mins)),0)) * 100 AS Availability_percent FROM oee_details_data",
       "groupable_by": [
         "machine_id",
         "machine_name",
@@ -251,13 +251,13 @@
       "type": "derived_kpi",
       "table": "oee_details_data",
       "aggregates": {
-        "H": "SUM(1)",
+        "RD": "SUM(run_duration)",
         "DT": "SUM(downtime_mins)",
         "GB": "SUM(good_bags)",
         "TS": "AVG(target_speed)"
       },
-      "formula": "((GB / NULLIF((H*60 - DT),0)) / TS) * 100",
-      "query": "SELECT ((SUM(good_bags) / NULLIF((SUM(1)*60 - SUM(downtime_mins)),0)) / AVG(target_speed)) * 100 AS Performance_percent FROM oee_details_data",
+      "formula": "((GB / NULLIF(RD,0)) / TS) * 100",
+      "query": "SELECT ((SUM(good_bags) / NULLIF(SUM(run_duration),0)) / AVG(target_speed)) * 100 AS Performance_percent FROM oee_details_data",
       "groupable_by": [
         "machine_id",
         "machine_name",

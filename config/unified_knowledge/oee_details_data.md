@@ -74,10 +74,10 @@ Can be aggregated by shift, date, line, machine, and grammage.
 ## WORKED EXAMPLES
 
 Q: What is the OEE for machine 4 today?
-SQL: SELECT machine_name, (((SUM(good_bags)/NULLIF((SUM(1)*60-SUM(downtime_mins)),0))/NULLIF(AVG(target_speed),0)*100) * ((SUM(1)*60-SUM(downtime_mins))/NULLIF(SUM(1)*60,0)*100) * (CASE WHEN SUM(good_bags)=0 THEN 0 ELSE 100-((SUM(overlimit_count)+SUM(failed_bags))/NULLIF(SUM(good_bags),0))*100 END)) / 10000 AS oee_percent FROM oee_details_data WHERE machine_id = 4 AND start_time >= CURRENT_DATE AND start_time < CURRENT_DATE + INTERVAL '1 day' GROUP BY machine_id, machine_name
+SQL: SELECT machine_name, (((SUM(good_bags)/NULLIF(SUM(run_duration),0))/NULLIF(AVG(target_speed),0)*100) * ((SUM(run_duration))/NULLIF(SUM(run_duration)+SUM(downtime_mins),0)*100) * (CASE WHEN SUM(good_bags)=0 THEN 0 ELSE 100-((SUM(overlimit_count)+SUM(failed_bags))/NULLIF(SUM(good_bags),0))*100 END)) / 10000 AS oee_percent FROM oee_details_data WHERE machine_id = 4 AND start_time >= CURRENT_DATE AND start_time < CURRENT_DATE + INTERVAL '1 day' GROUP BY machine_id, machine_name
 
 Q: Show availability for each machine yesterday
-SQL: SELECT machine_id, machine_name, ((SUM(1)*60 - SUM(downtime_mins)) / NULLIF(SUM(1)*60,0)) * 100 AS availability_percent FROM oee_details_data WHERE start_time >= CURRENT_DATE - INTERVAL '1 day' AND start_time < CURRENT_DATE GROUP BY machine_id, machine_name ORDER BY availability_percent DESC
+SQL: SELECT machine_id, machine_name, (SUM(run_duration) / NULLIF(SUM(run_duration) + SUM(downtime_mins),0)) * 100 AS availability_percent FROM oee_details_data WHERE start_time >= CURRENT_DATE - INTERVAL '1 day' AND start_time < CURRENT_DATE GROUP BY machine_id, machine_name ORDER BY availability_percent DESC
 
 Q: Highest downtime machine this week
 SQL: SELECT machine_id, machine_name, SUM(downtime_mins) AS total_downtime_mins FROM oee_details_data WHERE start_time >= DATE_TRUNC('week', CURRENT_DATE) GROUP BY machine_id, machine_name ORDER BY total_downtime_mins DESC LIMIT 1

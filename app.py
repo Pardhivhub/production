@@ -718,6 +718,8 @@ async def stream_chat(req: QueryRequest):
                 else:
                     logger.info("Topic Shift Detector: NEW TOPIC detected. Ignoring context.")
                     conversation_manager.clear_session(req.session_id)
+                    conv_context = None
+                    full_context = None
 
             global table_selector
             if table_selector is None:
@@ -780,7 +782,7 @@ async def stream_chat(req: QueryRequest):
             nl_parser = NLFilterParser()
             time_filter = nl_parser.parse_temporal_filter(contextualized_query, time_column=resolved_time_col)
             if time_filter:
-                enhanced_hints += f"\n\nPARSED TIME FILTER: {time_filter}\nUse this exact WHERE clause fragment for time filtering."
+                enhanced_hints += f"\n\nPARSED TIME FILTER: {time_filter}\nUse this exact WHERE clause fragment for time filtering. DO NOT try to re-parse the date using DATE_TRUNC with string literals."
 
             # Pass matched_tables to sql_generator for confirmed table hint
             llm_generated_sql, rules_meta_list = await generator.generate_sql(
