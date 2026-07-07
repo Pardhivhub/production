@@ -4,7 +4,16 @@ import re
 import json
 from pathlib import Path
 from typing import List, Dict, Set, Tuple
-import requests
+import sys
+
+# --- HOTFIX FOR OLDER LINUX SERVERS (SQLite < 3.35.0) ---
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import chromadb
 from chromadb import EmbeddingFunction
 from backend.config import settings
