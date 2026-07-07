@@ -43,7 +43,10 @@ class DatabaseConnector:
     async def connect(self):
         try:
             logger.info(f"Connecting to database via URL: {self.db_url}")
-            self.engine = create_async_engine(self.db_url)
+            if "asyncpg" in self.db_url:
+                self.engine = create_async_engine(self.db_url, connect_args={"server_settings": {"search_path": "public,itciot"}})
+            else:
+                self.engine = create_async_engine(self.db_url)
             # Verify the connection instantly
             async with self.engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
