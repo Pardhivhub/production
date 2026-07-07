@@ -44,7 +44,7 @@ class DatabaseConnector:
         try:
             logger.info(f"Connecting to database via URL: {self.db_url}")
             if "asyncpg" in self.db_url:
-                self.engine = create_async_engine(self.db_url, connect_args={"server_settings": {"search_path": "public,itciot"}})
+                self.engine = create_async_engine(self.db_url, connect_args={"server_settings": {"search_path": "itciot"}})
             else:
                 self.engine = create_async_engine(self.db_url)
             # Verify the connection instantly
@@ -134,7 +134,7 @@ class DatabaseConnector:
                 if dialect == "sqlite":
                     query_tables = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
                 else:  # Postgres
-                    query_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema IN ('public', 'itciot');"
+                    query_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'itciot';"
                 
                 res_tables = await conn.execute(text(query_tables))
                 table_names = list(set([r[0] for r in res_tables.all()]))
@@ -149,7 +149,7 @@ class DatabaseConnector:
                     else:  # Postgres
                         res_cols = await conn.execute(text(
                             f"SELECT column_name, data_type FROM information_schema.columns "
-                            f"WHERE table_schema IN ('public', 'itciot') AND table_name='{table}';"
+                            f"WHERE table_schema = 'itciot' AND table_name='{table}';"
                         ))
                         for r in res_cols.all():
                             columns.append({"name": r[0], "type": r[1]})
