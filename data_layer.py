@@ -233,7 +233,8 @@ class SemanticLayer:
         categorical_vals = []
         for col in columns:
             col_type = col.get("type", "").lower()
-            col_name = col.get("name", "").lower()
+            original_col_name = col.get("name", "")
+            col_name = original_col_name.lower()
             if "char" in col_type or "text" in col_type or "string" in col_type:
                 # Exclude columns that are likely unique IDs or timestamps
                 if "id" in col_name and not col_name.endswith("_id"):
@@ -242,7 +243,7 @@ class SemanticLayer:
                     continue
                 try:
                     prefix = "itciot." if "postgres" in self.db.db_url else ""
-                    query = f'SELECT DISTINCT "{col_name}" FROM {prefix}{table_name} WHERE "{col_name}" IS NOT NULL LIMIT 50'
+                    query = f'SELECT DISTINCT "{original_col_name}" FROM {prefix}{table_name} WHERE "{original_col_name}" IS NOT NULL LIMIT 50'
                     res = await self.db.execute_query(query)
                     for row in res.get("rows", []):
                         val = row.get(col.get("name"))
