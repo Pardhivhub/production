@@ -134,7 +134,7 @@ class DatabaseConnector:
                     query_tables = "SELECT table_name FROM information_schema.tables WHERE table_schema IN ('public', 'itciot');"
                 
                 res_tables = await conn.execute(text(query_tables))
-                table_names = [r[0] for r in res_tables.all()]
+                table_names = list(set([r[0] for r in res_tables.all()]))
                 
                 # Retrieve column info for each table
                 for table in table_names:
