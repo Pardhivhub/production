@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Set, Tuple
 import sys
+import requests
 
 # --- HOTFIX FOR OLDER LINUX SERVERS (SQLite < 3.35.0) ---
 try:

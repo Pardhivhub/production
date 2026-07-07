@@ -151,32 +151,10 @@ class DatabaseConnector:
                         for r in res_cols.all():
                             columns.append({"name": r[0], "type": r[1]})
                             
-                    # Retrieve sample rows (up to 3) for better LLM context
+                    # Skip retrieving sample rows and row counts to avoid asyncpg transaction aborts
+                    # on views or restricted tables. (Speeds up boot time significantly!)
                     sample_rows = []
-                    try:
-                        sample_res = await conn.execute(text(f"SELECT * FROM {table} LIMIT 3;"))
-                        rows = sample_res.all()
-                        col_names = [c for c in sample_res.keys()]
-                        for row in rows:
-                            row_dict = {}
-                            for col, val in zip(col_names, row):
-                                if hasattr(val, "quantize") or type(val).__name__ == "Decimal":
-                                    row_dict[col] = float(val)
-                                elif hasattr(val, "isoformat"):
-                                    row_dict[col] = val.isoformat()
-                                else:
-                                    row_dict[col] = val
-                            sample_rows.append(row_dict)
-                    except Exception:
-                        sample_rows = []
-                    
-                    # Retrieve the row count for the table
                     row_count = 0
-                    try:
-                        count_res = await conn.execute(text(f"SELECT COUNT(*) FROM {table};"))
-                        row_count = count_res.scalar()
-                    except Exception:
-                        row_count = 0
                         
                     tables.append({
                         "name": table,
