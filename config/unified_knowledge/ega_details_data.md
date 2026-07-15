@@ -1,12 +1,15 @@
 # TABLE: ega_details_data
+
 # VERIFIED AGAINST LIVE DATABASE SCHEMA
 
 ## PURPOSE
+
 Stores machine-wise hourly production and EGA (Extra Giveaway Amount) metrics.
 Tracks packaging weights, actual vs theoretical pack weights, and target limits to measure material giveaway loss.
 Data is captured every one hour per machine.
 
 ## COLUMNS (COMPLETE LIST — VERIFIED)
+
 - `machine_id`: Integer ID of the machine.
 - `machine_name`: TEXT — machine name (e.g. 'Machine-1'). USE DIRECTLY, no JOIN needed.
 - `loop_id`: Integer ID of the production loop/line.
@@ -34,15 +37,19 @@ Data is captured every one hour per machine.
 - `total_weight`: DOUBLE PRECISION — total weight processed.
 
 ## FORMULAS
+
 EGA calculations for multiple hours/days MUST be computed dynamically using SUM:
+
 - **EGA Giveaway %** = `((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight), 0)) * 100`
 
 ## JOIN RULES
+
 - ✓ `machine_name` is ALREADY in the table — NO JOIN to `machines` is needed.
 - ✓ `loop_name` is ALREADY in the table — NO JOIN to `gmiiot_lines` is needed.
 - Only JOIN `machines` if you need extra columns from machines not already here.
 
 ## FORBIDDEN PATTERNS
+
 - ✗ NEVER use `AVG(ega_percent)`. For any aggregation, use the SUM formula above.
 - ✗ NEVER join `ega_details_data` to `wastage_records` directly.
 - ✗ NEVER add a `plant_id` column — it does NOT exist in this table.
@@ -50,31 +57,32 @@ EGA calculations for multiple hours/days MUST be computed dynamically using SUM:
 - ✗ NEVER JOIN machines just to get machine_name — it's already in the table.
 
 ## ROOT CAUSE ANALYSIS ("WHY" QUERIES)
+
 - If user asks "Why is EGA high?" or "reasons for EGA loss", query driver columns alongside EGA:
   `SUM(over_scale)`, `SUM(over_weight)`, `SUM(total_dumps)`, `AVG(mean_weight)`, `ega_limit`
 
 ## WORKED EXAMPLES
 
 Q: What is the total EGA percentage across all machines?
-SQL: SELECT ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data
+SQL: SELECT ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent FROM ega_details_data
 
 Q: Show EGA percent grouped by machine
-SQL: SELECT machine_id, machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data GROUP BY machine_id, machine_name ORDER BY ega_percent DESC
+SQL: SELECT machine_id, machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent FROM ega_details_data GROUP BY machine_id, machine_name ORDER BY ega_percent DESC
 
 Q: Show me the EGA for machine 14 yesterday
-SQL: SELECT machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data WHERE machine_id = 14 AND start_time >= CURRENT_DATE - INTERVAL '1 day' AND start_time < CURRENT_DATE GROUP BY machine_id, machine_name
+SQL: SELECT machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent FROM ega_details_data WHERE machine_id = 14 AND start_time >= CURRENT_DATE - INTERVAL '1 day' AND start_time < CURRENT_DATE GROUP BY machine_id, machine_name
 
 Q: Which machine has the lowest EGA percentage this month?
-SQL: SELECT machine_id, machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data WHERE start_time >= DATE_TRUNC('month', CURRENT_DATE) GROUP BY machine_id, machine_name ORDER BY ega_percent ASC LIMIT 1
+SQL: SELECT machine_id, machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent FROM ega_details_data WHERE start_time >= DATE_TRUNC('month', CURRENT_DATE) GROUP BY machine_id, machine_name ORDER BY ega_percent ASC LIMIT 1
 
 Q: Show EGA percent by day for the past 30 days
-SQL: SELECT DATE_TRUNC('day', start_time) AS day, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data WHERE start_time >= CURRENT_DATE - INTERVAL '30 days' GROUP BY DATE_TRUNC('day', start_time) ORDER BY day ASC
+SQL: SELECT DATE_TRUNC('day', start_time) AS day, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent FROM ega_details_data WHERE start_time >= CURRENT_DATE - INTERVAL '30 days' GROUP BY DATE_TRUNC('day', start_time) ORDER BY day ASC
 
 Q: EGA for ridge cut variant
-SQL: SELECT variant, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent FROM ega_details_data WHERE variant ILIKE '%ridge cut%' GROUP BY variant
+SQL: SELECT variant, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent FROM ega_details_data WHERE variant ILIKE '%ridge cut%' GROUP BY variant
 
 Q: Why was EGA high last month? (Root cause breakdown by machine)
-SQL: SELECT machine_id, machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) * 100 AS ega_percent, SUM(over_scale) AS total_over_scale, SUM(over_weight) AS total_over_weight, SUM(total_dumps) AS total_dumps, AVG(mean_weight) AS avg_mean_weight FROM ega_details_data WHERE start_time >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND start_time < DATE_TRUNC('month', CURRENT_DATE) GROUP BY machine_id, machine_name ORDER BY ega_percent DESC
+SQL: SELECT machine_id, machine_name, ((SUM(t_weight) - SUM(theoretical_pack_weight)) / NULLIF(SUM(t_weight),0)) \* 100 AS ega_percent, SUM(over_scale) AS total_over_scale, SUM(over_weight) AS total_over_weight, SUM(total_dumps) AS total_dumps, AVG(mean_weight) AS avg_mean_weight FROM ega_details_data WHERE start_time >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND start_time < DATE_TRUNC('month', CURRENT_DATE) GROUP BY machine_id, machine_name ORDER BY ega_percent DESC
 
 Q: Show over-scale bags count by machine
 SQL: SELECT machine_id, machine_name, SUM(over_scale) AS total_over_scale FROM ega_details_data GROUP BY machine_id, machine_name ORDER BY total_over_scale DESC

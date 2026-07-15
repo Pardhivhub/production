@@ -1,9 +1,11 @@
 # TABLE: wastage_records
 
 ## PURPOSE
+
 Stores shift-wise wastage and production rejection data entered manually by operators, JTAs, or shift in-charges. Captures total wastage quantity, wastage reasons, production rejection, and unaccounted downtime details.
 
 ## COLUMNS (COMPLETE LIST)
+
 - `wastage_kg`: Weight of wasted packaging material in kg. (Summable)
 - `filled_bag_rejection`: Quantitative rejections in kilograms. (Summable)
 - `failed_bag_rejection`: Quantitative rejections in kilograms. (Summable)
@@ -25,18 +27,22 @@ Stores shift-wise wastage and production rejection data entered manually by oper
 - `corrective_action`: The corrective action taken.
 
 ## FORMULAS
+
 - **JSON Extract**: To extract keys from the breakdown columns, cast to jsonb: `CAST(wastage_breakdown AS jsonb)->>'key'`
 
 ## JOIN RULES
+
 - To join with plants: `wastage_records JOIN gmiiot_plants ON wastage_records.plant_id = gmiiot_plants.plant_id`
 - To join with lines: `wastage_records JOIN gmiiot_lines ON wastage_records.line_id = gmiiot_lines.loop_id`
 - To join with machines: `wastage_records JOIN machines ON wastage_records.machine_id = machines.id`
 
 ## FORBIDDEN PATTERNS
+
 - ✗ NEVER use `start_time` for date filtering. You MUST use `production_start_time`.
 - ✗ NEVER use the `variant` column. You MUST use `flavour`.
 
 ## FILTERING & OUTLIERS
+
 - 🚨 CRITICAL TIME COLUMN RULE: The ONLY time column that exists on this table is `production_start_time`.
 - 🚨 DO NOT hallucinate `start_time` or `time` or `date`. You MUST use `production_start_time` for ALL date filters (e.g., `production_start_time >= CURRENT_DATE`).
 - Shift filtering MUST use uppercase letters: `shift = 'A'` (Morning), `shift = 'B'` (Afternoon), `shift = 'C'` (Night).
@@ -47,7 +53,7 @@ Q: Total wastage by plant name
 SQL: SELECT p.plant_name, SUM(w.wastage_kg) AS total_wastage_kg FROM wastage_records w JOIN gmiiot_plants p ON w.plant_id = p.plant_id GROUP BY p.plant_name
 
 Q: List all wastage entries for machine 7 on June 28
-SQL: SELECT * FROM wastage_records w JOIN machines m ON w.machine_id = m.id WHERE m.id = 7 AND w.production_start_time BETWEEN '2026-06-28' AND '2026-06-28 23:59:59'
+SQL: SELECT \* FROM wastage_records w JOIN machines m ON w.machine_id = m.id WHERE m.id = 7 AND w.production_start_time BETWEEN '2026-06-28' AND '2026-06-28 23:59:59'
 
 Q: Total wastage comparison: this month vs last month
 SQL: SELECT EXTRACT(MONTH FROM production_start_time) as month, SUM(wastage_kg) AS total_wastage FROM wastage_records WHERE production_start_time >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') GROUP BY EXTRACT(MONTH FROM production_start_time)

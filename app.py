@@ -159,12 +159,14 @@ class NLFilterParser:
             end = datetime(year, q_end_month, calendar.monthrange(year, q_end_month)[1])
             return self._to_sql(start, end, time_column)
 
-        # ── 4. Named month + year ("May 2025", "in June 2025", "during April 2025") ─
+        # ── 4. Named month + year ("May 2025", "in June") ─
         month_pattern = '|'.join(self.MONTH_MAP.keys())
-        m = re.search(rf'\b({month_pattern})\s+(\d{{4}})\b', q)
+        # Make the year optional: it matches "June 2026" OR just "June"
+        m = re.search(rf'\b({month_pattern})\b(?:\s+(\d{{4}}))?', q)
         if m:
             month_num = self.MONTH_MAP[m.group(1)]
-            year = int(m.group(2))
+            # If a year was provided, use it. Otherwise, default to current year.
+            year = int(m.group(2)) if m.group(2) else now.year
             last_day = calendar.monthrange(year, month_num)[1]
             start = datetime(year, month_num, 1)
             end = datetime(year, month_num, last_day)
